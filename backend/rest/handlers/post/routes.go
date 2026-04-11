@@ -1,4 +1,4 @@
-package user
+package post
 
 import (
 	"net/http"
@@ -7,42 +7,50 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, manager *middlewares.Manager) {
-	// Public routes - No authentication required
+	// Public routes
 	mux.Handle(
-		"POST /api/users",
+		"GET /api/posts",
 		manager.With(
-			http.HandlerFunc(h.CreateUser),
+			http.HandlerFunc(h.GetAllPosts),
 		),
 	)
 
 	mux.Handle(
-		"POST /api/users/login",
+		"GET /api/posts/{id}",
 		manager.With(
-			http.HandlerFunc(h.Login),
+			http.HandlerFunc(h.GetPostByID),
 		),
 	)
 
 	// Protected routes - Authentication required
 	mux.Handle(
-		"GET /api/users/me",
+		"POST /api/posts",
 		manager.With(
-			http.HandlerFunc(h.GetUserByJWT),
+			http.HandlerFunc(h.CreatePost),
 			h.middlewares.AuthenticateJWT,
 		),
 	)
 
 	mux.Handle(
-		"GET /api/user/profile",
+		"PUT /api/posts/{id}",
 		manager.With(
-			http.HandlerFunc(h.GetProfile),
+			http.HandlerFunc(h.UpdatePost),
 			h.middlewares.AuthenticateJWT,
 		),
 	)
 
 	mux.Handle(
-		"PUT /api/user/profile",
+		"DELETE /api/posts/{id}",
 		manager.With(
-			http.HandlerFunc(h.UpdateProfile),
+			http.HandlerFunc(h.DeletePost),
+			h.middlewares.AuthenticateJWT,
+		),
+	)
+
+	mux.Handle(
+		"GET /api/user/my-posts",
+		manager.With(
+			http.HandlerFunc(h.GetUserPosts),
 			h.middlewares.AuthenticateJWT,
 		),
 	)

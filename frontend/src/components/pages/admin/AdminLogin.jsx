@@ -17,11 +17,12 @@ export default function AdminLogin() {
   const { admin, loginAdmin } = useAdminAuth();
 
   useEffect(() => {
-    // Check if already logged in
-    if (admin) {
-      navigate('/admin/dashboard');
+    // Check if already logged in - redirect to dashboard
+    if (admin && !loading) {
+      console.log('Admin already logged in, redirecting to dashboard');
+      navigate('/admin/dashboard', { replace: true });
     }
-  }, [admin, navigate]);
+  }, [admin, loading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,11 +33,12 @@ export default function AdminLogin() {
       const result = await loginAdmin(email.trim(), password);
 
       if (result.success) {
-        console.log('Login successful! Redirecting to dashboard...');
-        // Redirect after a small delay to ensure context updates
+        console.log('Login successful!');
+        // Wait a moment for state to update, then navigate
         setTimeout(() => {
+          console.log('Navigating to admin dashboard...');
           navigate('/admin/dashboard');
-        }, 300);
+        }, 100);
       } else {
         setError(result.message || 'Login failed');
         setLoading(false);
@@ -130,8 +132,8 @@ export default function AdminLogin() {
 
             <div className="mt-6 p-4 bg-white/5 rounded-2xl text-sm border border-white/10">
               <p className="text-white/70 font-medium mb-2">Admin Credentials:</p>
-              <p className="text-white/80 font-mono text-sm">Email: admin@example.com</p>
-              <p className="text-white/80 font-mono text-sm">Password: Admin@123</p>
+              <p className="text-white/80 font-mono text-sm">Email: admin@livesync.com</p>
+              <p className="text-white/80 font-mono text-sm">Password: admin123</p>
             </div>
 
             <div className="mt-8 text-center">

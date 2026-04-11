@@ -45,11 +45,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"token": token,
 		"user": map[string]interface{}{
-			"id":    user.ID,
-			"name":  user.Name,
-			"email": user.Email,
-			"phone": user.Phone,
-			"role":  user.Role,
+			"id":         user.ID,
+			"name":       user.Name,
+			"email":      user.Email,
+			"phone":      user.Phone,
+			"avatar_url": user.AvatarURL,
+			"role":       user.Role,
 		},
 	}
 	util.SendData(w, http.StatusOK, response)

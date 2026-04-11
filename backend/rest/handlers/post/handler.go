@@ -1,22 +1,19 @@
-package user
+package post
 
 import (
 	"livesync-backend/config"
-	"livesync-backend/repo"
 	"livesync-backend/rest/middlewares"
 )
 
 type Handler struct {
 	cnf         *config.Config
-	userRepo    repo.UserRepo
 	middlewares *middlewares.Middleware
 	db          interface{} // Will store *sqlx.DB for direct queries
 }
 
-func NewHandler(cnf *config.Config, userRepo repo.UserRepo, mw *middlewares.Middleware, db interface{}) *Handler {
+func NewHandler(cnf *config.Config, mw *middlewares.Middleware, db interface{}) *Handler {
 	return &Handler{
 		cnf:         cnf,
-		userRepo:    userRepo,
 		middlewares: mw,
 		db:          db,
 	}

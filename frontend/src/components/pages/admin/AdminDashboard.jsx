@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { Logo } from '../../ui/Logo';
-import { getPosts } from '../../../data/mockData';
+import api from '../../../services/api';
 import { Button } from '../../ui/button';
 import { Shield, Users, FileText, BarChart3, LogOut } from 'lucide-react';
 
@@ -11,13 +11,16 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalPosts: 0,
-    familyPosts: 0,
-    bachelorPosts: 0,
-    offerPosts: 0,
-    requirementPosts: 0,
+    total_users: 0,
+    total_posts: 0,
+    active_posts: 0,
+    inactive_posts: 0,
+    rejected_posts: 0,
+    total_messages: 0,
+    total_favorites: 0,
   });
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (loading) return;
@@ -27,17 +30,42 @@ export default function AdminDashboard() {
       return;
     }
 
-    const posts = getPosts();
-    const savedUsers = JSON.parse(localStorage.getItem('livesync_users') || '[]');
+    const fetchStats = async () => {
+      try {
+        setStatsLoading(true);
+        setError(null);
+        
+        const response = await api.get('/admin/stats');
+        
+        if (response.data) {
+          setStats({
+            total_users: response.data.total_users || 0,
+            total_posts: response.data.total_posts || 0,
+            active_posts: response.data.active_posts || 0,
+            inactive_posts: response.data.inactive_posts || 0,
+            rejected_posts: response.data.rejected_posts || 0,
+            total_messages: response.data.total_messages || 0,
+            total_favorites: response.data.total_favorites || 0,
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching stats:', err);
+        setError('Failed to load statistics');
+        // Fallback to mock data if backend fails
+        setStats({
+          totalUsers: 0,
+          totalPosts: 0,
+          familyPosts: 0,
+          bachelorPosts: 0,
+          offerPosts: 0,
+          requirementPosts: 0,
+        });
+      } finally {
+        setStatsLoading(false);
+      }
+    };
 
-    setStats({
-      totalUsers: savedUsers.length + 1,
-      totalPosts: posts.length,
-      familyPosts: posts.filter(p => p.type === 'family').length,
-      bachelorPosts: posts.filter(p => p.type === 'bachelor').length,
-      offerPosts: posts.filter(p => p.postType === 'offer').length,
-      requirementPosts: posts.filter(p => p.postType === 'requirement').length,
-    });
+    fetchStats();
   }, [admin, navigate, loading]);
 
   const handleLogout = () => {
@@ -83,17 +111,30 @@ export default function AdminDashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-10">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-          <p className="text-gray-600 text-lg">Welcome back, Admin User</p>
+          <p className="text-gray-600 text-lg">Welcome back, {admin?.name || 'Admin'}</p>
         </div>
 
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+            {error}
+          </div>
+        )}
+
+        {statsLoading && (
+          <div className="mb-10 p-8 bg-white rounded-xl shadow-sm border border-gray-200 text-center">
+            <p className="text-gray-600">Loading statistics...</p>
+          </div>
+        )}
+
         {/* Stats Grid */}
+        {!statsLoading && (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           {/* Total Users */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-2">Total Users</p>
-                <p className="text-4xl font-bold text-purple-600">{stats.totalUsers}</p>
+                <p className="text-4xl font-bold text-purple-600">{stats.total_users}</p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
                 <Users className="w-6 h-6 text-purple-600" />
@@ -107,71 +148,72 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-2">Total Posts</p>
-                <p className="text-4xl font-bold text-indigo-600">{stats.totalPosts}</p>
+                <p className="text-4xl font-bold text-indigo-600">{stats.total_posts}</p>
               </div>
               <div className="bg-indigo-100 p-3 rounded-lg">
                 <FileText className="w-6 h-6 text-indigo-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500">Active listings</p>
+            <p className="text-xs text-gray-500">All listings</p>
           </div>
 
-          {/* Family Posts */}
+          {/* Active Posts */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Family Posts</p>
-                <p className="text-4xl font-bold text-blue-600">{stats.familyPosts}</p>
+                <p className="text-sm font-medium text-gray-600 mb-2">Active Posts</p>
+                <p className="text-4xl font-bold text-blue-600">{stats.active_posts}</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-lg">
                 <FileText className="w-6 h-6 text-blue-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500">Family flat listings</p>
+            <p className="text-xs text-gray-500">Approved listings</p>
           </div>
 
-          {/* Bachelor Posts */}
+          {/* Inactive Posts */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Bachelor Posts</p>
-                <p className="text-4xl font-bold text-green-600">{stats.bachelorPosts}</p>
+                <p className="text-sm font-medium text-gray-600 mb-2">Inactive Posts</p>
+                <p className="text-4xl font-bold text-green-600">{stats.inactive_posts}</p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
                 <Users className="w-6 h-6 text-green-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500">Bachelor flat listings</p>
+            <p className="text-xs text-gray-500">Pending listings</p>
           </div>
 
-          {/* Offers */}
+          {/* Rejected Posts */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Offers</p>
-                <p className="text-4xl font-bold text-orange-600">{stats.offerPosts}</p>
+                <p className="text-sm font-medium text-gray-600 mb-2">Rejected Posts</p>
+                <p className="text-4xl font-bold text-orange-600">{stats.rejected_posts}</p>
               </div>
               <div className="bg-orange-100 p-3 rounded-lg">
                 <BarChart3 className="w-6 h-6 text-orange-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500">Available properties</p>
+            <p className="text-xs text-gray-500">Rejected listings</p>
           </div>
 
-          {/* Requirements */}
+          {/* Total Messages */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Requirements</p>
-                <p className="text-4xl font-bold text-pink-600">{stats.requirementPosts}</p>
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Messages</p>
+                <p className="text-4xl font-bold text-pink-600">{stats.total_messages}</p>
               </div>
               <div className="bg-pink-100 p-3 rounded-lg">
                 <FileText className="w-6 h-6 text-pink-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500">Looking for properties</p>
+            <p className="text-xs text-gray-500">User messages</p>
           </div>
         </div>
+        )}
 
         {/* Management Sections */}
         <div className="grid md:grid-cols-2 gap-6">

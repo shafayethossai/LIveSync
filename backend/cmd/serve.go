@@ -9,6 +9,7 @@ import (
 	"livesync-backend/repo"
 	"livesync-backend/rest"
 	adminHandler "livesync-backend/rest/handlers/admin"
+	postHandler "livesync-backend/rest/handlers/post"
 	userHandler "livesync-backend/rest/handlers/user"
 	"livesync-backend/rest/middlewares"
 )
@@ -35,13 +36,15 @@ func Serve() {
 	adminRepo := repo.NewAdminRepo(dbCon)
 
 	// handlers
-	userHandlerInstance := userHandler.NewHandler(cnf, userRepo, mw)
+	userHandlerInstance := userHandler.NewHandler(cnf, userRepo, mw, dbCon)
 	adminHandlerInstance := adminHandler.NewHandler(cnf, adminRepo, userRepo, mw, dbCon)
+	postHandlerInstance := postHandler.NewHandler(cnf, mw, dbCon)
 
 	server := rest.NewServer(
 		cnf,
 		userHandlerInstance,
 		adminHandlerInstance,
+		postHandlerInstance,
 	)
 	server.Start()
 }

@@ -18,9 +18,15 @@ export const useAuth = () => {
   const fetchCurrentUser = async () => { // getting current user info using token
     try {
       const response = await api.get('/users/me');
-      setUser(response.data);
+      const userData = response.data;
+      
+      // Update both state and localStorage
+      setUser(userData);
+      localStorage.setItem('livesync_user', JSON.stringify(userData));
+      
+      console.log('User data fetched:', userData);
     } catch (error) {
-      console.error("Token invalid or expired");
+      console.error("Token invalid or expired", error);
       logout();
     } finally {
       setLoading(false);
@@ -56,6 +62,22 @@ export const useAuth = () => {
     }
   };
 
+  const updateProfile = async (profileData) => { // update user profile function
+    try {
+      const response = await api.put('/user/profile', profileData);
+      const updatedUser = response.data.user || response.data;
+      
+      localStorage.setItem('livesync_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      return { success: true, message: 'Profile updated successfully', user: updatedUser };
+    } catch (error) {
+      console.error('Update profile error:', error.response?.data || error.message);
+      const message = error.response?.data?.message || error.response?.data?.error || 'Profile update failed';
+      return { success: false, message };
+    }
+  };
+
   const logout = () => { // logout function to clear user data and token
     localStorage.removeItem('token');
     localStorage.removeItem('livesync_user');
@@ -68,6 +90,7 @@ export const useAuth = () => {
     login,
     signup,
     logout,
+    updateProfile,      // update profile function
     fetchCurrentUser,   // useful for protected routes
   };
 };

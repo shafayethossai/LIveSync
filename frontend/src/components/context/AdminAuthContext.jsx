@@ -1,15 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../../services/api';
 
 const AdminAuthContext = createContext(undefined);
-
-// Fixed admin credentials
-const FIXED_ADMIN = {
-  email: 'admin@example.com',
-  password: 'Admin@123',
-  id: 'admin-001',
-  name: 'Admin User',
-  role: 'admin'
-};
 
 export function AdminAuthProvider({ children }) {
   const [admin, setAdmin] = useState(null);
@@ -31,37 +23,43 @@ export function AdminAuthProvider({ children }) {
 
   const loginAdmin = async (email, password) => {
     try {
-      // Simulate async operation with slight delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Check against fixed credentials
-      if (email === FIXED_ADMIN.email && password === FIXED_ADMIN.password) {
+      // Call backend login API
+      const response = await api.post('/admin/login', { email, password });
+      
+      if (response.data && response.data.token) {
         const adminData = {
-          id: FIXED_ADMIN.id,
-          name: FIXED_ADMIN.name,
-          email: FIXED_ADMIN.email,
-          role: FIXED_ADMIN.role
+          id: response.data.admin?.id || 1,
+          name: response.data.admin?.name || 'Admin User',
+          email: response.data.admin?.email || email,
+          role: response.data.admin?.role || 'admin'
         };
         
-        // Store in localStorage
-        localStorage.setItem('admin_token', 'fixed-admin-token-' + Date.now());
+        // Store token and admin data in localStorage
+        localStorage.setItem('admin_token', response.data.token);
         localStorage.setItem('livesync_admin', JSON.stringify(adminData));
         
         setAdmin(adminData);
         return { success: true, message: 'Login successful' };
       } else {
-        return { success: false, message: 'Invalid email or password' };
+        return { 
+          success: false, 
+          message: 'Invalid response from server' 
+        };
       }
     } catch (error) {
-      return { success: false, message: error.message };
+      console.error('Login error:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || error.message || 'Login failed' 
+      };
     }
   };
 
   const signupAdmin = async (name, email, password, phone) => {
-    // Admin signup is disabled - use fixed credentials to login
+    // Admin signup is disabled
     return { 
       success: false, 
-      message: 'Admin signup is disabled. Use your fixed credentials to login.' 
+      message: 'Admin signup is disabled. Contact administrator.' 
     };
   };
 

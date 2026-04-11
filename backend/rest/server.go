@@ -8,6 +8,7 @@ import (
 
 	"livesync-backend/config"
 	"livesync-backend/rest/handlers/admin"
+	"livesync-backend/rest/handlers/post"
 	"livesync-backend/rest/handlers/user"
 	"livesync-backend/rest/middlewares"
 )
@@ -16,13 +17,15 @@ type Server struct {
 	cnf          *config.Config
 	userHandler  *user.Handler
 	adminHandler *admin.Handler
+	postHandler  *post.Handler
 }
 
-func NewServer(cnf *config.Config, userHandler *user.Handler, adminHandler *admin.Handler) *Server {
+func NewServer(cnf *config.Config, userHandler *user.Handler, adminHandler *admin.Handler, postHandler *post.Handler) *Server {
 	return &Server{
 		cnf:          cnf,
 		userHandler:  userHandler,
 		adminHandler: adminHandler,
+		postHandler:  postHandler,
 	}
 }
 
@@ -39,10 +42,19 @@ func (server *Server) Start() {
 	// Register routes
 	server.userHandler.RegisterRoutes(mux, manager)
 	server.adminHandler.RegisterRoutes(mux, manager)
+	server.postHandler.RegisterRoutes(mux, manager)
 
 	addr := ":" + strconv.Itoa(server.cnf.HttpPort)
 	fmt.Println("🚀 Server is running on", addr)
-	err := http.ListenAndServe(addr, wrappedMux)
+
+	// Create HTTP server with increased body size limit (10MB)
+	httpServer := &http.Server{
+		Addr:           addr,
+		Handler:        wrappedMux,
+		MaxHeaderBytes: 1 << 20, // 1MB
+	}
+
+	err := httpServer.ListenAndServe()
 
 	if err != nil {
 		fmt.Println("❌ Server error:", err)

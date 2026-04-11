@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../ui/Logo';
-import api from '../../services/api';                    // ← Real API
+import { createPost } from '../../services/posts';  // ← Use post service
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -78,22 +78,22 @@ export default function CreatePost() {
     try {
       const postData = {
         type: flatType,
-        postType,
+        post_type: postType,  // ← Changed to snake_case
         area: formData.area,
         description: formData.description,
         images: imageUrls,
         rooms: formData.rooms ? parseInt(formData.rooms) : undefined,
-        distanceFrom: formData.distanceFrom || undefined,
-        distanceKm: formData.distanceKm ? parseFloat(formData.distanceKm) : undefined,
+        distance_from: formData.distanceFrom || undefined,  // ← Changed to snake_case
+        distance_km: formData.distanceKm ? parseFloat(formData.distanceKm) : undefined,  // ← Changed to snake_case
       };
 
       // Add price fields based on postType and flatType
       if (postType === 'offer') {
         if (flatType === 'family') {
           postData.rent = formData.rent ? parseInt(formData.rent) : undefined;
-          postData.availableFrom = formData.availableFrom || undefined;
+          postData.available_from = formData.availableFrom || undefined;  // ← Changed to snake_case
         } else {
-          postData.rentShare = formData.rentShare ? parseInt(formData.rentShare) : undefined;
+          postData.rent_share = formData.rentShare ? parseInt(formData.rentShare) : undefined;  // ← Changed to snake_case
         }
       } else {
         postData.budget = formData.budget ? parseInt(formData.budget) : undefined;
@@ -105,23 +105,29 @@ export default function CreatePost() {
         postData.floor = formData.floor ? parseInt(formData.floor) : undefined;
         postData.bathrooms = formData.bathrooms ? parseInt(formData.bathrooms) : undefined;
         postData.balconies = formData.balconies ? parseInt(formData.balconies) : undefined;
-        postData.hasLift = formData.hasLift === 'yes';
-        postData.utilityCost = formData.utilityCost ? parseInt(formData.utilityCost) : undefined;
+        postData.has_lift = formData.hasLift === 'yes';  // ← Changed to snake_case
+        postData.utility_cost = formData.utilityCost ? parseInt(formData.utilityCost) : undefined;  // ← Changed to snake_case
       }
 
       // Bachelor specific fields
       if (flatType === 'bachelor') {
-        postData.roomType = roomType;
-        postData.sharedFacilities = formData.sharedFacilities || undefined;
+        postData.shared_facilities = formData.sharedFacilities || undefined;  // ← Changed to snake_case
       }
 
-      const response = await api.post('/posts', postData);
+      console.log('Creating post with data:', postData);
+      const result = await createPost(postData);
 
-      alert('Post created successfully!');
-      navigate('/listings');
+      console.log('Create post result:', result);
+
+      if (result.success) {
+        alert('Post created successfully!');
+        navigate('/listings');
+      } else {
+        setError(result.message || 'Failed to create post');
+      }
     } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Failed to create post. Please try again.');
+      console.error('Error creating post:', err);
+      setError(err.message || 'Failed to create post. Please try again.');
     } finally {
       setLoading(false);
     }
