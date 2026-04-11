@@ -31,20 +31,20 @@ func Serve() {
 	fmt.Println("✅ Database connected and migrated successfully")
 
 	// middlewares and repositories
-	mw := middlewares.NewMiddleware(cnf)
+	middleware := middlewares.NewMiddleware(cnf)
 	userRepo := repo.NewUserRepo(dbCon)
 	adminRepo := repo.NewAdminRepo(dbCon)
 
 	// handlers
-	userHandlerInstance := userHandler.NewHandler(cnf, userRepo, mw, dbCon)
-	adminHandlerInstance := adminHandler.NewHandler(cnf, adminRepo, userRepo, mw, dbCon)
-	postHandlerInstance := postHandler.NewHandler(cnf, mw, dbCon)
+	userHandler := userHandler.NewHandler(cnf, userRepo, middleware, dbCon)
+	adminHandler := adminHandler.NewHandler(cnf, adminRepo, userRepo, middleware, dbCon)
+	postHandler := postHandler.NewHandler(cnf, middleware, dbCon)
 
 	server := rest.NewServer(
 		cnf,
-		userHandlerInstance,
-		adminHandlerInstance,
-		postHandlerInstance,
+		userHandler,
+		adminHandler,
+		postHandler,
 	)
 	server.Start()
 }

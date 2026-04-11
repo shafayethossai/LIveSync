@@ -15,10 +15,47 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, manager *middlewares.Manage
 		),
 	)
 
+	// OTP-based signup flow
+	mux.Handle(
+		"POST /api/auth/signup/request-otp",
+		manager.With(
+			http.HandlerFunc(h.RequestOTP),
+		),
+	)
+
+	mux.Handle(
+		"POST /api/auth/signup/verify-otp",
+		manager.With(
+			http.HandlerFunc(h.VerifyOTP),
+		),
+	)
+
+	mux.Handle(
+		"POST /api/auth/signup/resend-otp",
+		manager.With(
+			http.HandlerFunc(h.ResendOTP),
+		),
+	)
+
 	mux.Handle(
 		"POST /api/users/login",
 		manager.With(
 			http.HandlerFunc(h.Login),
+		),
+	)
+
+	// Google OAuth routes
+	mux.Handle(
+		"POST /api/auth/google/callback",
+		manager.With(
+			http.HandlerFunc(h.GoogleCallback),
+		),
+	)
+
+	mux.Handle(
+		"POST /api/auth/google/signin",
+		manager.With(
+			http.HandlerFunc(h.GoogleSignIn),
 		),
 	)
 

@@ -18,11 +18,14 @@ type DBConfig struct {
 }
 
 type Config struct {
-	Version     string
-	ServiceName string
-	HttpPort    int
-	SecretKey   string
-	DB          *DBConfig
+	Version            string
+	ServiceName        string
+	HttpPort           int
+	SecretKey          string
+	DB                 *DBConfig
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
 }
 
 var configuration *Config
@@ -112,12 +115,34 @@ func loadConfig() {
 		EnableSSLMode: db_enable_ssl_mode,
 	}
 
+	// Load Google OAuth config
+	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+	if googleClientID == "" {
+		fmt.Println("GOOGLE_CLIENT_ID is Required")
+		os.Exit(1)
+	}
+
+	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+	if googleClientSecret == "" {
+		fmt.Println("GOOGLE_CLIENT_SECRET is Required")
+		os.Exit(1)
+	}
+
+	googleRedirectURL := os.Getenv("GOOGLE_REDIRECT_URL")
+	if googleRedirectURL == "" {
+		fmt.Println("GOOGLE_REDIRECT_URL is Required")
+		os.Exit(1)
+	}
+
 	configuration = &Config{
-		Version:     version,
-		ServiceName: serviceName,
-		HttpPort:    httpPort,
-		SecretKey:   secretKey,
-		DB:          db_config,
+		Version:            version,
+		ServiceName:        serviceName,
+		HttpPort:           httpPort,
+		SecretKey:          secretKey,
+		DB:                 db_config,
+		GoogleClientID:     googleClientID,
+		GoogleClientSecret: googleClientSecret,
+		GoogleRedirectURL:  googleRedirectURL,
 	}
 }
 

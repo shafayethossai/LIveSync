@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3002/api',   // This is where your Go backend will run
+  baseURL: 'http://localhost:4000/api',   // This is where your Go backend will run
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

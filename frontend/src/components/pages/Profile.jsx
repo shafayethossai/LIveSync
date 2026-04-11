@@ -25,6 +25,7 @@ export default function Profile() {
   const [success, setSuccess] = useState('');
   const [photoPreview, setPhotoPreview] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);
+  const [avatarChanged, setAvatarChanged] = useState(false);
 
   // Load user profile data on mount and when user changes
   useEffect(() => {
@@ -33,7 +34,6 @@ export default function Profile() {
     if (savedUserData) {
       try {
         const userData = JSON.parse(savedUserData);
-        console.log('Loaded user from localStorage:', userData);
         setFormData({
           name: userData.name || '',
           email: userData.email || '',
@@ -46,7 +46,7 @@ export default function Profile() {
         }
         setPageLoading(false);
       } catch (err) {
-        console.error('Error parsing saved user data:', err);
+        // Error parsing saved user data
       }
     }
     
@@ -63,7 +63,6 @@ export default function Profile() {
     }
     
     // Initialize form data from user
-    console.log('User data loaded from context:', { name: user.name, email: user.email, role: user.role, avatar_url: user.avatar_url });
     setFormData({
       name: user.name || '',
       email: user.email || '',
@@ -88,7 +87,6 @@ export default function Profile() {
   };
 
   const handleRoleChange = (value) => {
-    console.log('Role changed to:', value);
     setFormData(prev => ({ ...prev, role: value }));
     setError('');
   };
@@ -143,6 +141,8 @@ export default function Profile() {
           // Convert to compressed base64
           const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7); // 70% quality
           setPhotoPreview(compressedBase64);
+          setAvatarChanged(true);
+          // Store the compressed base64 in formData so it gets sent to backend
           setFormData(prev => ({ ...prev, avatar_url: compressedBase64 }));
           setError('');
         };
@@ -170,19 +170,29 @@ export default function Profile() {
     }
 
     try {
-      console.log('Sending profile update:', { name: formData.name, email: formData.email, phone: formData.phone, role: formData.role, hasPhoto: !!formData.avatar_url });
-      const result = await updateProfile(formData);
+      // Prepare profile data for sending - include avatar_url if changed
+      const profileDataToSend = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role,
+        // Send avatar_url if it was changed (compressed base64)
+        // Empty string means keep existing avatar
+        avatar_url: formData.avatar_url || '',
+      };
+      
+      const result = await updateProfile(profileDataToSend);
       
       if (result.success) {
         setSuccess('Profile updated successfully!');
+        // Redirect immediately to dashboard
         setTimeout(() => {
           navigate('/dashboard');
-        }, 1500);
+        }, 800);
       } else {
         setError(result.message || 'Failed to update profile');
       }
     } catch (err) {
-      console.error('Update profile error:', err);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

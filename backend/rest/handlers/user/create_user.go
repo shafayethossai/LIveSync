@@ -34,10 +34,9 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Default role to 'tenant'
-	role := "tenant"
-	if req.Role != "" {
-		role = req.Role
+	role := req.Role
+	if role == "" { // Default role to 'tenant' if not provided
+		role = "tenant"
 	}
 
 	user, err := h.userRepo.Create(repo.User{
@@ -53,5 +52,15 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	util.SendData(w, http.StatusCreated, user)
+	// Return user data in consistent format (same as Login endpoint)
+	response := map[string]interface{}{
+		"id":         user.ID,
+		"name":       user.Name,
+		"email":      user.Email,
+		"phone":      user.Phone,
+		"avatar_url": user.AvatarURL,
+		"role":       user.Role,
+		"created_at": user.CreatedAt,
+	}
+	util.SendData(w, http.StatusCreated, response)
 }

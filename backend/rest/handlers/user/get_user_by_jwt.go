@@ -3,37 +3,44 @@ package user
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"livesync-backend/util"
-
-	"github.com/jmoiron/sqlx"
 )
 
+// GetUserByJWT returns the user data from JWT token
 func (h *Handler) GetUserByJWT(w http.ResponseWriter, r *http.Request) {
-	db := h.db.(*sqlx.DB)
-
-	// Get user ID from context (set by AuthenticateJWT middleware)
 	userID := r.Context().Value("userID")
 	if userID == nil {
 		util.SendError(w, http.StatusUnauthorized, "Unauthorized: No user in context")
 		return
 	}
 
-	// Fetch complete user data from database
-	var user UserProfile
-	query := `
-		SELECT id, name, email, phone, avatar_url, role, created_at
-		FROM users
-		WHERE id = $1
-	`
+	// Convert userID - could be int or string
+	var userIDInt int
+	switch v := userID.(type) {
+	case int:
+		userIDInt = v
+	case string:
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			util.SendError(w, http.StatusInternalServerError, "Invalid user ID")
+			return
+		}
+		userIDInt = id
+	default:
+		util.SendError(w, http.StatusInternalServerError, "Invalid user ID type")
+		return
+	}
 
-	err := db.Get(&user, query, userID)
+	fmt.Printf("[GetUserByJWT] Fetching user for userID=%d\n", userIDInt)
+
+	profile, err := h.userRepo.GetProfileByID(userIDInt)
 	if err != nil {
-		fmt.Println("Error fetching user:", err)
+		fmt.Printf("[GetUserByJWT] Error: %v\n", err)
 		util.SendError(w, http.StatusNotFound, "User not found")
 		return
 	}
 
-	// Return complete user data
-	util.SendData(w, http.StatusOK, user)
+	util.SendData(w, http.StatusOK, profile)
 }

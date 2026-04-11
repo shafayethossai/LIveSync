@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"livesync-backend/util"
-
-	"github.com/jmoiron/sqlx"
 )
 
 type UpdateProfileRequest struct {
@@ -20,8 +19,6 @@ type UpdateProfileRequest struct {
 
 // UpdateProfile updates the profile of the logged-in user
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	db := h.db.(*sqlx.DB)
-
 	// Get user ID from JWT token (set by middleware)
 	userID := r.Context().Value("userID")
 	if userID == nil {
@@ -29,17 +26,14 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse request
 	var req UpdateProfileRequest
-
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&req)
-	if err != nil {
-		fmt.Println("Error decoding request:", err)
+	if err := decoder.Decode(&req); err != nil {
+		fmt.Printf("Decode error: %v\n", err)
 		util.SendError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-
-	fmt.Printf("Updating profile for userID: %v, Name: %s, Email: %s, Role: %s\n", userID, req.Name, req.Email, req.Role)
 
 	// Validate required fields
 	if req.Name == "" || req.Email == "" {
@@ -47,26 +41,33 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update user in database
-	query := `
-		UPDATE users
-		SET name = $1, email = $2, phone = $3, avatar_url = $4, role = COALESCE(NULLIF($5, ''), role), updated_at = CURRENT_TIMESTAMP
-		WHERE id = $6
-		RETURNING id, name, email, phone, avatar_url, role, created_at
-	`
-
-	var updatedProfile UserProfile
-	err = db.Get(&updatedProfile, query, req.Name, req.Email, req.Phone, req.AvatarURL, req.Role, userID)
-	if err != nil {
-		fmt.Println(err)
-		util.SendError(w, http.StatusInternalServerError, "Failed to update profile")
+	// Convert userID - could be int or string
+	var userIDInt int
+	switch v := userID.(type) {
+	case int:
+		userIDInt = v
+	case string:
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			util.SendError(w, http.StatusInternalServerError, "Invalid user ID")
+			return
+		}
+		userIDInt = id
+	default:
+		util.SendError(w, http.StatusInternalServerError, "Invalid user ID type")
 		return
 	}
 
-	response := map[string]interface{}{
-		"message": "Profile updated successfully",
-		"user":    updatedProfile,
+	fmt.Printf("[UpdateProfile] Calling repo for userID=%d\n", userIDInt)
+
+	// Call repository to update profile
+	updatedProfile, err := h.userRepo.UpdateProfile(userIDInt, req.Name, req.Email, req.Phone, req.AvatarURL, req.Role)
+	if err != nil {
+		fmt.Printf("[UpdateProfile] Error: %v\n", err)
+		util.SendError(w, http.StatusInternalServerError, "Failed to update profile: "+err.Error())
+		return
 	}
 
-	util.SendData(w, http.StatusOK, response)
+	// Return updated profile
+	util.SendData(w, http.StatusOK, updatedProfile)
 }

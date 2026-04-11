@@ -51,6 +51,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 			"phone":      user.Phone,
 			"avatar_url": user.AvatarURL,
 			"role":       user.Role,
+			"created_at": user.CreatedAt,
 		},
 	}
 	util.SendData(w, http.StatusOK, response)
