@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -53,6 +54,11 @@ type UserRepo interface {
 	GetTemporarySignupByEmail(email string) (*TemporarySignup, error)
 	VerifyAndCreateUser(tempSignup TemporarySignup) (*User, error)
 	DeleteTemporarySignup(email string) error
+	// Password reset methods
+	SetPasswordResetOTP(userID int, otp string, expiresAt interface{}) error
+	VerifyPasswordResetOTP(userID int, otp string) (bool, error)
+	UpdatePassword(userID int, newPassword string) error
+	ClearPasswordResetOTP(userID int) error
 }
 
 type userRepo struct {
@@ -306,5 +312,69 @@ func (r *userRepo) VerifyAndCreateUser(tempSignup TemporarySignup) (*User, error
 func (r *userRepo) DeleteTemporarySignup(email string) error {
 	query := `DELETE FROM temporary_signups WHERE email = $1`
 	_, err := r.db.Exec(query, email)
+	return err
+}
+
+// SetPasswordResetOTP stores the password reset OTP for a user
+func (r *userRepo) SetPasswordResetOTP(userID int, otp string, expiresAt interface{}) error {
+	query := `
+		UPDATE users 
+		SET otp_code = $1, otp_expires_at = $2
+		WHERE id = $3
+	`
+	_, err := r.db.Exec(query, otp, expiresAt, userID)
+	return err
+}
+
+// VerifyPasswordResetOTP verifies if the OTP is valid and not expired
+func (r *userRepo) VerifyPasswordResetOTP(userID int, otp string) (bool, error) {
+	var storedOTP string
+	var expiresAt sql.NullTime
+
+	query := `
+		SELECT otp_code, otp_expires_at 
+		FROM users 
+		WHERE id = $1
+	`
+	err := r.db.QueryRow(query, userID).Scan(&storedOTP, &expiresAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, errors.New("user not found")
+		}
+		return false, err
+	}
+
+	// Check if OTP matches
+	if storedOTP != otp {
+		return false, nil
+	}
+
+	// Check if OTP is expired
+	if expiresAt.Valid && time.Now().After(expiresAt.Time) {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// UpdatePassword updates the user's password with an hashed password
+func (r *userRepo) UpdatePassword(userID int, hashedPassword string) error {
+	query := `
+		UPDATE users 
+		SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+	_, err := r.db.Exec(query, hashedPassword, userID)
+	return err
+}
+
+// ClearPasswordResetOTP clears the OTP after successful password reset
+func (r *userRepo) ClearPasswordResetOTP(userID int) error {
+	query := `
+		UPDATE users 
+		SET otp_code = NULL, otp_expires_at = NULL
+		WHERE id = $1
+	`
+	_, err := r.db.Exec(query, userID)
 	return err
 }

@@ -4,25 +4,99 @@ import { Logo } from '../ui/Logo';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowRight, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import api from '../../services/api';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: Password
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleRequestReset = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
-    // TODO: Call real API when backend is ready
-    // Example: await api.post('/auth/forgot-password', { email });
-
-    setTimeout(() => {
-      setSubmitted(true);
+    try {
+      const response = await api.post('/auth/forgot-password', { email });
+      setSuccessMessage('Password reset code sent to your email');
+      setStep(2); // Move to OTP verification step
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send reset code. Please try again.');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    if (otp.length !== 6) {
+      setError('OTP must be 6 digits');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.post('/auth/forgot-password/verify-otp', {
+        email,
+        otp,
+      });
+      setSuccessMessage('OTP verified successfully');
+      setStep(3); // Move to password reset step
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid or expired OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.post('/auth/forgot-password/reset', {
+        email,
+        otp,
+        new_password: newPassword,
+      });
+      setSuccessMessage('Password reset successfully!');
+      setStep(4); // Show success state
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to reset password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoBack = () => {
+    if (step > 1) {
+      setError('');
+      setSuccessMessage('');
+      setStep(step - 1);
+    }
   };
 
   return (
@@ -56,14 +130,39 @@ export default function ForgotPassword() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 border border-white/20"
           >
-            {!submitted ? (
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-2"
+              >
+                <AlertCircle className="w-5 h-5 text-red-400" />
+                <p className="text-red-200 text-sm">{error}</p>
+              </motion.div>
+            )}
+
+            {/* Success Message */}
+            {successMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg flex items-center gap-2"
+              >
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <p className="text-green-200 text-sm">{successMessage}</p>
+              </motion.div>
+            )}
+
+            {/* Step 1: Email */}
+            {step === 1 && (
               <>
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold text-white mb-2">Forgot Password?</h2>
                   <p className="text-white/70">Enter your email and we'll send reset instructions.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleRequestReset} className="space-y-5">
                   <div>
                     <Label htmlFor="email" className="text-white font-medium mb-2 block">Email Address</Label>
                     <div className="relative">
@@ -85,29 +184,139 @@ export default function ForgotPassword() {
                     disabled={loading}
                     className="w-full h-14 bg-white text-cyan-600 hover:bg-white/90 rounded-2xl text-lg font-semibold"
                   >
-                    {loading ? "Sending..." : "Send Reset Link"}
+                    {loading ? "Sending..." : "Send Reset Code"}
                     {!loading && <ArrowRight className="ml-2 w-5 h-5" />}
                   </Button>
                 </form>
               </>
-            ) : (
+            )}
+
+            {/* Step 2: OTP Verification */}
+            {step === 2 && (
+              <>
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold text-white mb-2">Verify Code</h2>
+                  <p className="text-white/70">Enter the 6-digit code sent to {email}</p>
+                </div>
+
+                <form onSubmit={handleVerifyOTP} className="space-y-5">
+                  <div>
+                    <Label htmlFor="otp" className="text-white font-medium mb-2 block">Verification Code</Label>
+                    <div className="relative">
+                      <Input
+                        id="otp"
+                        type="text"
+                        placeholder="000000"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                        maxLength="6"
+                        required
+                        className="bg-white/10 border-white/20 text-white h-14 rounded-2xl text-center text-2xl font-mono tracking-widest"
+                      />
+                    </div>
+                    <p className="text-white/60 text-xs mt-2">Code expires in 10 minutes</p>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={loading || otp.length !== 6}
+                    className="w-full h-14 bg-white text-cyan-600 hover:bg-white/90 rounded-2xl text-lg font-semibold disabled:opacity-50"
+                  >
+                    {loading ? "Verifying..." : "Verify Code"}
+                    {!loading && otp.length === 6 && <ArrowRight className="ml-2 w-5 h-5" />}
+                  </Button>
+                </form>
+
+                <button
+                  onClick={handleGoBack}
+                  className="mt-4 text-white/80 hover:text-white text-sm flex items-center gap-1"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Change Email
+                </button>
+              </>
+            )}
+
+            {/* Step 3: New Password */}
+            {step === 3 && (
+              <>
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold text-white mb-2">Set New Password</h2>
+                  <p className="text-white/70">Create a strong password for your account</p>
+                </div>
+
+                <form onSubmit={handleResetPassword} className="space-y-5">
+                  <div>
+                    <Label htmlFor="newPassword" className="text-white font-medium mb-2 block">New Password</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      className="bg-white/10 border-white/20 text-white h-14 rounded-2xl"
+                    />
+                    <p className="text-white/60 text-xs mt-1">Minimum 6 characters</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="confirmPassword" className="text-white font-medium mb-2 block">Confirm Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="bg-white/10 border-white/20 text-white h-14 rounded-2xl"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={loading || newPassword.length < 6 || confirmPassword !== newPassword}
+                    className="w-full h-14 bg-white text-cyan-600 hover:bg-white/90 rounded-2xl text-lg font-semibold disabled:opacity-50"
+                  >
+                    {loading ? "Resetting..." : "Reset Password"}
+                    {!loading && <ArrowRight className="ml-2 w-5 h-5" />}
+                  </Button>
+                </form>
+
+                <button
+                  onClick={handleGoBack}
+                  className="mt-4 text-white/80 hover:text-white text-sm flex items-center gap-1"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back
+                </button>
+              </>
+            )}
+
+            {/* Step 4: Success */}
+            {step === 4 && (
               <div className="text-center py-8">
                 <div className="mx-auto w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
                   <CheckCircle className="w-10 h-10 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Check Your Email!</h3>
+                <h3 className="text-2xl font-bold text-white mb-3">Password Reset Successful!</h3>
                 <p className="text-white/80 mb-6">
-                  Reset instructions sent to <span className="font-semibold">{email}</span>
+                  Your password has been changed successfully.
                 </p>
-                <p className="text-white/60 text-sm">Didn't receive it? Check spam or try again.</p>
+                <Link
+                  to="/login"
+                  className="inline-block px-8 py-3 bg-white text-cyan-600 rounded-2xl font-semibold hover:bg-white/90 transition"
+                >
+                  Go to Login
+                </Link>
               </div>
             )}
 
-            <div className="mt-8 text-center">
-              <Link to="/login" className="inline-flex items-center gap-2 text-white/80 hover:text-white">
-                <ArrowLeft className="w-4 h-4" /> Back to Login
-              </Link>
-            </div>
+            {step !== 4 && (
+              <div className="mt-8 text-center">
+                <Link to="/login" className="inline-flex items-center gap-2 text-white/80 hover:text-white">
+                  <ArrowLeft className="w-4 h-4" /> Back to Login
+                </Link>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       </div>

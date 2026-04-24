@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../ui/Logo';
 import api from '../../services/api';
@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Search, MapPin, Bed, Building2, Users, MessageCircle } from 'lucide-react';
+import { Search, MapPin, Bed, Building2, Users } from 'lucide-react';
 
 export default function Listings() {
   const { user } = useAuth();
@@ -24,6 +24,7 @@ export default function Listings() {
   const [maxRent, setMaxRent] = useState('');
   const [minRooms, setMinRooms] = useState('');
   const [hasLift, setHasLift] = useState('all');
+  const [showCreateOptions, setShowCreateOptions] = useState(false);
 
   // Fetch real posts from backend
   useEffect(() => {
@@ -69,14 +70,6 @@ export default function Listings() {
     });
   }, [posts, searchTerm, filterType, filterPostType, minRent, maxRent, minRooms, hasLift]);
 
-  const handleMessage = (postId) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    navigate(`/messages?postId=${postId}`);
-  };
-
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading listings...</div>;
 
   return (
@@ -85,10 +78,37 @@ export default function Listings() {
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <Logo />
-          <div className="flex items-center gap-4">
-            <Button onClick={() => navigate('/create-post?type=family')} className="bg-gradient-to-r from-blue-600 to-green-600">
+          <div className="flex items-center gap-4 relative">
+            <Button
+              onClick={() => setShowCreateOptions((prev) => !prev)}
+              className="bg-gradient-to-r from-blue-600 to-green-600"
+            >
               Create Post
             </Button>
+            {showCreateOptions && (
+              <div className="absolute top-12 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-2 w-52 z-20">
+                <Button
+                  onClick={() => {
+                    setShowCreateOptions(false);
+                    navigate('/create-post?type=family');
+                  }}
+                  variant="ghost"
+                  className="w-full justify-start"
+                >
+                  Family Post
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowCreateOptions(false);
+                    navigate('/create-post?type=bachelor');
+                  }}
+                  variant="ghost"
+                  className="w-full justify-start"
+                >
+                  Bachelor Post
+                </Button>
+              </div>
+            )}
             {user && (
               <Button onClick={() => navigate('/profile')} variant="outline">
                 {user.name || 'Profile'}
@@ -238,17 +258,6 @@ export default function Listings() {
                     {post.views_count} views • {post.post_type}
                   </div>
 
-                  {/* Action Button */}
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMessage(post.id);
-                    }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Message Owner
-                  </Button>
                 </div>
               </div>
             ))}

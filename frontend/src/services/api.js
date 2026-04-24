@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api',   // This is where your Go backend will run
+  baseURL: `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api`,   // This is where your Go backend will run
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -11,8 +11,8 @@ const api = axios.create({
 // Automatically add JWT token to every request
 api.interceptors.request.use(
   (config) => {
-    // Check for admin token first, then user token
-    const adminToken = localStorage.getItem('admin_token');
+    // Check for admin token first (from sessionStorage), then user token (from localStorage)
+    const adminToken = sessionStorage.getItem('admin_token');
     const userToken = localStorage.getItem('token');
     const tokenToUse = adminToken || userToken;
     
@@ -30,10 +30,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Check which token was used and clear accordingly
-      const adminToken = localStorage.getItem('admin_token');
+      const adminToken = sessionStorage.getItem('admin_token');
       if (adminToken) {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('livesync_admin');
+        sessionStorage.removeItem('admin_token');
+        sessionStorage.removeItem('livesync_admin');
         window.location.href = '/admin/login';
       } else {
         localStorage.removeItem('token');

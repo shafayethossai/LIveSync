@@ -5,7 +5,7 @@ import api from '../../../services/api';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Badge } from '../../ui/badge';
-import { Shield, Search, ArrowLeft, MapPin, Building2, Bed, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Shield, Search, ArrowLeft, MapPin, Building2, Bed, Trash2, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
 export default function AdminPosts() {
@@ -54,6 +54,11 @@ export default function AdminPosts() {
     } finally {
       setPostsLoading(false);
     }
+  };
+
+  const handleViewPost = (postId) => {
+    // Navigate to post details with from=admin parameter
+    navigate(`/post/${postId}?from=admin`);
   };
 
   const handleApprovePost = async (postId) => {
@@ -213,8 +218,8 @@ export default function AdminPosts() {
               const currentImage = images.length > 0 ? images[0] : null;
 
               return (
-                <div key={post.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                  {/* Image */}
+                <div key={post.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow group">
+                  {/* Image with overlay */}
                   <div className="relative h-40 bg-gray-100">
                     {currentImage ? (
                       <img src={currentImage} alt={post.area} className="w-full h-full object-cover" />
@@ -223,6 +228,17 @@ export default function AdminPosts() {
                         <Building2 className="w-16 h-16 text-gray-300" />
                       </div>
                     )}
+                    {/* View Details Overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <Button
+                        onClick={() => handleViewPost(post.id)}
+                        size="sm"
+                        className="bg-white text-gray-900 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View Details
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="p-4">

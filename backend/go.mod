@@ -13,6 +13,9 @@ require (
 
 require (
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
+	github.com/gofrs/uuid v4.0.0+incompatible // indirect
+	github.com/gomodule/redigo v1.8.4 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 )

@@ -1,27 +1,32 @@
 package admin
 
 import (
+	"database/sql"
 	"fmt"
 	"livesync-backend/util"
 	"net/http"
 	"strconv"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
-type PostData struct {
-	ID         int    `json:"id" db:"id"`
-	UserID     int    `json:"user_id" db:"user_id"`
-	Type       string `json:"type" db:"type"`
-	PostType   string `json:"post_type" db:"post_type"`
-	Area       string `json:"area" db:"area"`
-	Rent       *int   `json:"rent" db:"rent"`
-	Budget     *int   `json:"budget" db:"budget"`
-	Status     string `json:"status" db:"status"`
-	ViewsCount int    `json:"views_count" db:"views_count"`
-	CreatedAt  string `json:"created_at" db:"created_at"`
-	UserName   string `json:"user_name" db:"user_name"`
-	UserEmail  string `json:"user_email" db:"user_email"`
+type AdminPostData struct {
+	ID               string         `json:"id" db:"id"`
+	UserID           string         `json:"user_id" db:"user_id"`
+	Type             string         `json:"type" db:"type"`
+	PostType         string         `json:"post_type" db:"post_type"`
+	Area             string         `json:"area" db:"area"`
+	Description      string         `json:"description" db:"description"`
+	Images           pq.StringArray `json:"images" db:"images"`
+	Rooms            sql.NullInt64  `json:"rooms" db:"rooms"`
+	Rent             sql.NullInt64  `json:"price" db:"rent"`
+	Budget           sql.NullInt64  `json:"budget" db:"budget"`
+	Status           string         `json:"status" db:"status"`
+	ViewsCount       int            `json:"views_count" db:"views_count"`
+	CreatedAt        string         `json:"created_at" db:"created_at"`
+	UserName         string         `json:"user_name" db:"user_name"`
+	UserEmail        string         `json:"user_email" db:"user_email"`
 }
 
 // GetAllPosts returns paginated list of all posts
@@ -48,7 +53,8 @@ func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 	offset := (page - 1) * limit
 
 	query := `
-		SELECT p.id, p.user_id, p.type, p.post_type, p.area, p.rent, p.budget, p.status, p.views_count, p.created_at,
+		SELECT p.id, p.user_id, p.type, p.post_type, p.area, p.description, p.images, p.rooms, 
+		       p.rent, p.budget, p.status, p.views_count, p.created_at,
 		       u.name as user_name, u.email as user_email
 		FROM posts p
 		JOIN users u ON p.user_id = u.id
@@ -67,12 +73,39 @@ func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 		args = append(args, limit, offset)
 	}
 
-	var posts []PostData
+	var posts []AdminPostData
 	err := db.Select(&posts, query, args...)
 	if err != nil {
 		fmt.Println(err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to fetch posts")
 		return
+	}
+
+	// Convert posts to clean response format
+	cleanPosts := make([]map[string]interface{}, len(posts))
+	for i, post := range posts {
+		images := []string{}
+		if len(post.Images) > 0 {
+			images = post.Images
+		}
+
+		cleanPosts[i] = map[string]interface{}{
+			"id":           post.ID,
+			"user_id":      post.UserID,
+			"type":         post.Type,
+			"post_type":    post.PostType,
+			"area":         post.Area,
+			"description":  post.Description,
+			"images":       images,
+			"rooms":        post.Rooms.Int64,
+			"price":        post.Rent.Int64,
+			"budget":       post.Budget.Int64,
+			"status":       post.Status,
+			"views_count":  post.ViewsCount,
+			"created_at":   post.CreatedAt,
+			"user_name":    post.UserName,
+			"user_email":   post.UserEmail,
+		}
 	}
 
 	// Get total count
@@ -86,7 +119,7 @@ func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]interface{}{
-		"posts": posts,
+		"posts": cleanPosts,
 		"pagination": map[string]interface{}{
 			"page":  page,
 			"limit": limit,

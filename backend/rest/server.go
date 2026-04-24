@@ -47,7 +47,8 @@ func (server *Server) Start() {
 	addr := ":" + strconv.Itoa(server.cnf.HttpPort)
 	fmt.Println("🚀 Server is running on", addr)
 
-	// Create HTTP server with increased body size limit (10MB)
+	// Create HTTP server with increased body size limit (1MB)
+	// Security and stability: prevent very large headers from consuming resources.
 	httpServer := &http.Server{
 		Addr:           addr,
 		Handler:        wrappedMux,

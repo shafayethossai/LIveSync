@@ -7,9 +7,9 @@ export function AdminAuthProvider({ children }) {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load admin from localStorage on mount
+  // Load admin from sessionStorage on mount (clears on browser close for security)
   useEffect(() => {
-    const savedAdmin = localStorage.getItem('livesync_admin');
+    const savedAdmin = sessionStorage.getItem('livesync_admin');
     if (savedAdmin) {
       try {
         setAdmin(JSON.parse(savedAdmin));
@@ -34,9 +34,9 @@ export function AdminAuthProvider({ children }) {
           role: response.data.admin?.role || 'admin'
         };
         
-        // Store token and admin data in localStorage
-        localStorage.setItem('admin_token', response.data.token);
-        localStorage.setItem('livesync_admin', JSON.stringify(adminData));
+        // Store token and admin data in sessionStorage (clears on browser close)
+        sessionStorage.setItem('admin_token', response.data.token);
+        sessionStorage.setItem('livesync_admin', JSON.stringify(adminData));
         
         setAdmin(adminData);
         return { success: true, message: 'Login successful' };
@@ -65,8 +65,8 @@ export function AdminAuthProvider({ children }) {
 
   const logoutAdmin = () => {
     setAdmin(null);
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('livesync_admin');
+    sessionStorage.removeItem('admin_token');
+    sessionStorage.removeItem('livesync_admin');
   };
 
   return (

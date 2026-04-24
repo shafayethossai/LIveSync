@@ -44,6 +44,28 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, manager *middlewares.Manage
 		),
 	)
 
+	// Forgot password flow
+	mux.Handle(
+		"POST /api/auth/forgot-password",
+		manager.With(
+			http.HandlerFunc(h.ForgotPassword),
+		),
+	)
+
+	mux.Handle(
+		"POST /api/auth/forgot-password/verify-otp",
+		manager.With(
+			http.HandlerFunc(h.VerifyResetOTP),
+		),
+	)
+
+	mux.Handle(
+		"POST /api/auth/forgot-password/reset",
+		manager.With(
+			http.HandlerFunc(h.ResetPassword),
+		),
+	)
+
 	// Google OAuth routes
 	mux.Handle(
 		"POST /api/auth/google/callback",
