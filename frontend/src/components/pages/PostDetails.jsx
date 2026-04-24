@@ -7,7 +7,7 @@ import api from '../../services/api';                    // ← Real API
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { ArrowLeft, MapPin, Bed, Bath, Wind, Building2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MapPin, Bed, Bath, Wind, Building2, Users, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 
 export default function PostDetails() {
   const { id } = useParams();
@@ -36,6 +36,17 @@ export default function PostDetails() {
 
     fetchPost();
   }, [id]);
+
+  const handleMessageOwner = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    const ownerId = post?.user_id || post?.userId;
+    const ownerName = post?.user_name || post?.userName || 'User';
+    navigate(`/messages?postId=${id}&ownerId=${ownerId}&ownerName=${encodeURIComponent(ownerName)}`);
+  };
 
   const nextImage = () => setCurrentImageIndex((prev) => (prev + 1) % (post?.images?.length || 1));
   const prevImage = () => setCurrentImageIndex((prev) => (prev - 1 + (post?.images?.length || 1)) % (post?.images?.length || 1));
@@ -146,9 +157,13 @@ export default function PostDetails() {
                 </div>
               </div>
 
-              <div className="w-full h-12 rounded-md border border-dashed border-gray-300 text-gray-500 flex items-center justify-center text-sm">
-              Messaging is currently disabled
-              </div>
+              <Button
+                onClick={handleMessageOwner}
+                className="w-full h-12 gap-2 bg-gradient-to-r from-blue-600 to-green-600"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Send Message
+              </Button>
             </div>
           </div>
         </div>

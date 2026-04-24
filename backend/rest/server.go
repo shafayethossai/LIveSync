@@ -8,24 +8,30 @@ import (
 
 	"livesync-backend/config"
 	"livesync-backend/rest/handlers/admin"
+	"livesync-backend/rest/handlers/message"
 	"livesync-backend/rest/handlers/post"
 	"livesync-backend/rest/handlers/user"
 	"livesync-backend/rest/middlewares"
+	"livesync-backend/rest/socket"
 )
 
 type Server struct {
-	cnf          *config.Config
-	userHandler  *user.Handler
-	adminHandler *admin.Handler
-	postHandler  *post.Handler
+	cnf            *config.Config
+	userHandler    *user.Handler
+	adminHandler   *admin.Handler
+	postHandler    *post.Handler
+	messageHandler *message.Handler
+	socketHandler  *socket.Handler
 }
 
-func NewServer(cnf *config.Config, userHandler *user.Handler, adminHandler *admin.Handler, postHandler *post.Handler) *Server {
+func NewServer(cnf *config.Config, userHandler *user.Handler, adminHandler *admin.Handler, postHandler *post.Handler, messageHandler *message.Handler, socketHandler *socket.Handler) *Server {
 	return &Server{
-		cnf:          cnf,
-		userHandler:  userHandler,
-		adminHandler: adminHandler,
-		postHandler:  postHandler,
+		cnf:            cnf,
+		userHandler:    userHandler,
+		adminHandler:   adminHandler,
+		postHandler:    postHandler,
+		messageHandler: messageHandler,
+		socketHandler:  socketHandler,
 	}
 }
 
@@ -43,6 +49,12 @@ func (server *Server) Start() {
 	server.userHandler.RegisterRoutes(mux, manager)
 	server.adminHandler.RegisterRoutes(mux, manager)
 	server.postHandler.RegisterRoutes(mux, manager)
+	server.messageHandler.RegisterRoutes(mux, manager)
+
+	mux.Handle(
+		"GET /ws/messages",
+		http.HandlerFunc(server.socketHandler.ServeWS),
+	)
 
 	addr := ":" + strconv.Itoa(server.cnf.HttpPort)
 	fmt.Println("🚀 Server is running on", addr)

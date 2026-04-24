@@ -12,6 +12,8 @@ export default function Messages() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const postId = searchParams.get('postId');
+  const ownerId = searchParams.get('ownerId');
+  const ownerName = searchParams.get('ownerName');
 
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -36,10 +38,27 @@ export default function Messages() {
 
   // Auto-open conversation if coming from a post
   useEffect(() => {
-    if (postId && user) {
-      // You can implement opening specific conversation here
+    if (!user || !ownerId) return;
+
+    const ownerIdNum = Number(ownerId);
+    if (!ownerIdNum || Number.isNaN(ownerIdNum)) return;
+
+    const existing = conversations.find((conv) => Number(conv.userId) === ownerIdNum);
+    if (existing) {
+      setSelectedConversation(existing);
+      return;
     }
-  }, [postId, user]);
+
+    if (ownerIdNum === user.id) return;
+
+    setSelectedConversation({
+      userId: ownerIdNum,
+      userName: ownerName || 'User',
+      userPhoto: '',
+      messages: [],
+      postId,
+    });
+  }, [postId, ownerId, ownerName, user, conversations]);
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation || !user) return;

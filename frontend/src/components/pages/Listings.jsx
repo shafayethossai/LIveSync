@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Search, MapPin, Bed, Building2, Users } from 'lucide-react';
+import { Search, MapPin, Bed, Building2, Users, MessageCircle } from 'lucide-react';
 
 export default function Listings() {
   const { user } = useAuth();
@@ -69,6 +69,17 @@ export default function Listings() {
       return true;
     });
   }, [posts, searchTerm, filterType, filterPostType, minRent, maxRent, minRooms, hasLift]);
+
+  const handleMessageOwner = (post) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    const ownerId = post.user_id || post.userId;
+    const ownerName = post.user_name || post.userName || 'User';
+    navigate(`/messages?postId=${post.id}&ownerId=${ownerId}&ownerName=${encodeURIComponent(ownerName)}`);
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading listings...</div>;
 
@@ -257,6 +268,17 @@ export default function Listings() {
                   <div className="text-xs text-gray-500 mb-3">
                     {post.views_count} views • {post.post_type}
                   </div>
+
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMessageOwner(post);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Message Owner
+                  </Button>
 
                 </div>
               </div>
