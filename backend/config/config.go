@@ -135,6 +135,13 @@ func loadConfig() {
 		os.Exit(1)
 	}
 
+	// forr database connection string
+	ConnectionString := os.Getenv("DB_STRING")
+	if ConnectionString == "" {
+		fmt.Println("DB_STRING is Required")
+		os.Exit(1)
+	}
+
 	configuration = &Config{
 		Version:            version,
 		ServiceName:        serviceName,
@@ -144,7 +151,7 @@ func loadConfig() {
 		GoogleClientID:     googleClientID,
 		GoogleClientSecret: googleClientSecret,
 		GoogleRedirectURL:  googleRedirectURL,
-		ConnectionString:   os.Getenv("DB_STRING"),
+		ConnectionString:   ConnectionString,
 	}
 }
 
