@@ -49,13 +49,22 @@ export default function Login() {
     setLoading(false);
   };
 
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const googleLoginAvailable = Boolean(googleClientId && googleClientId.trim());
+
   const handleGoogleError = () => {
     setError('Google login failed. Please try again.');
   };
 
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 relative overflow-hidden">
+    <>
+      {!googleLoginAvailable && (
+        <div className="fixed top-4 left-1/2 z-20 w-full max-w-xl -translate-x-1/2 rounded-2xl bg-red-500/90 p-4 text-center text-sm font-semibold text-white shadow-xl">
+          Google login is not configured. Set <code className="rounded bg-white/10 px-1 py-0.5">VITE_GOOGLE_CLIENT_ID</code> for production.
+        </div>
+      )}
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
           <motion.div
             className="absolute -top-40 -right-40 w-96 h-96 bg-white/10 rounded-full blur-3xl"
@@ -139,11 +148,17 @@ export default function Login() {
 
               {/* Google Sign-In Button */}
               <div className="mt-6 flex justify-center">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
-                  theme="dark"
-                />
+                {googleLoginAvailable ? (
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    theme="dark"
+                  />
+                ) : (
+                  <div className="rounded-2xl border border-white/20 bg-white/10 px-6 py-4 text-center text-sm text-white/90">
+                    Google sign-in is unavailable until the app is configured with a valid <code className="rounded bg-white/10 px-1 py-0.5">VITE_GOOGLE_CLIENT_ID</code>.
+                  </div>
+                )}
               </div>
 
               <div className="mt-8 text-center">
@@ -163,5 +178,6 @@ export default function Login() {
         </div>
       </div>
     </GoogleOAuthProvider>
+    </>
   );
 }

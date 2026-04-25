@@ -39,3 +39,13 @@ Summary List (For Reference)
     3. autoprefixer
 
     npx tailwindcss init -p
+
+
+## Environment variables
+
+The frontend requires the following Vite environment variables before deploying to Vercel or another production host:
+
+- `VITE_API_URL` - the backend API base URL
+- `VITE_GOOGLE_CLIENT_ID` - the Google OAuth client ID used by the Google sign-in button
+
+Example values belong in `frontend/.env.example` and `frontend/.env.production` when building the app for production.
