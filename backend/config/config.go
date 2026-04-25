@@ -26,6 +26,7 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleRedirectURL  string
+	ConnectionString   string
 }
 
 var configuration *Config
@@ -143,6 +144,7 @@ func loadConfig() {
 		GoogleClientID:     googleClientID,
 		GoogleClientSecret: googleClientSecret,
 		GoogleRedirectURL:  googleRedirectURL,
+		ConnectionString:   os.Getenv("DB_STRING"),
 	}
 }
 

@@ -19,7 +19,7 @@ import (
 func Serve() {
 	cnf := config.GetConfig()
 
-	dbCon, err := db.NewConnection(cnf.DB)
+	dbCon, err := db.NewConnection(cnf.ConnectionString)
 	if err != nil {
 		fmt.Println("Database Connection Error:", err)
 		os.Exit(1)
