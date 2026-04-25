@@ -87,14 +87,15 @@ export default function Listings() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Logo />
-          <div className="flex items-center gap-4 relative">
+        <div className="w-full px-2 sm:px-4 lg:px-8 py-2 sm:py-4 flex items-center justify-between gap-1 sm:gap-4">
+          <Logo size="sm" className="flex-shrink-0" />
+          <div className="flex items-center gap-1 sm:gap-3 relative">
             <Button
               onClick={() => setShowCreateOptions((prev) => !prev)}
-              className="bg-gradient-to-r from-blue-600 to-green-600"
+              className="bg-gradient-to-r from-blue-600 to-green-600 px-1.5 sm:px-4 py-1 sm:py-2 h-auto text-xs sm:text-sm"
             >
-              Create Post
+              <span className="hidden sm:inline">Create Post</span>
+              <span className="sm:hidden">+</span>
             </Button>
             {showCreateOptions && (
               <div className="absolute top-12 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-2 w-52 z-20">
@@ -121,8 +122,9 @@ export default function Listings() {
               </div>
             )}
             {user && (
-              <Button onClick={() => navigate('/profile')} variant="outline">
-                {user.name || 'Profile'}
+              <Button onClick={() => navigate('/profile')} variant="outline" className="px-1.5 sm:px-4 py-1 sm:py-2 h-auto text-xs sm:text-sm">
+                <span className="hidden sm:inline">{user.name || 'Profile'}</span>
+                <span className="sm:hidden">👤</span>
               </Button>
             )}
           </div>

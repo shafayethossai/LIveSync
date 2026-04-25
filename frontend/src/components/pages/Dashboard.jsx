@@ -35,26 +35,26 @@ export default function Dashboard() {
         animate={{ y: 0, opacity: 1 }}
         className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-white/20 sticky top-0 z-50"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Logo variant="gradient" size="md" to="/dashboard" />
-            <nav className="flex items-center gap-3">
+        <div className="w-full px-2 sm:px-4 lg:px-8 py-2 sm:py-4">
+          <div className="flex items-center justify-between gap-1 sm:gap-4">
+            <Logo variant="gradient" size="sm" to="/dashboard" className="flex-shrink-0" />
+            <nav className="flex items-center gap-0.5 sm:gap-2">
               <Link to="/listings">
-                <Button variant="ghost" className="gap-2">
-                  <Building2 className="w-4 h-4" />
-                  Browse
+                <Button variant="ghost" className="gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 h-auto text-xs sm:text-sm">
+                  <Building2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Browse</span>
                 </Button>
               </Link>
               <Link to="/messages">
-                <Button variant="ghost" className="gap-2">
-                  <MessageCircle className="w-4 h-4" />
-                  Messages
+                <Button variant="ghost" className="gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 h-auto text-xs sm:text-sm">
+                  <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Messages</span>
                 </Button>
               </Link>
               <Link to="/profile">
-                <Button variant="outline" className="gap-2 bg-white/50 backdrop-blur-sm">
-                  <UserCircle className="w-4 h-4" />
-                  Profile
+                <Button variant="outline" className="gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 h-auto text-xs sm:text-sm bg-white/50 backdrop-blur-sm">
+                  <UserCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Profile</span>
                 </Button>
               </Link>
             </nav>

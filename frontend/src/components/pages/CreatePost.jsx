@@ -75,6 +75,12 @@ export default function CreatePost() {
       return;
     }
 
+    if (imageUrls.length === 0) {
+      setError('At least one image is required');
+      setLoading(false);
+      return;
+    }
+
     try {
       const postData = {
         type: flatType,
@@ -168,9 +174,9 @@ export default function CreatePost() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="w-full px-2 sm:px-4 lg:px-8 py-2 sm:py-4">
           <div className="flex items-center justify-between">
-            <Logo variant="gradient" size="md" to="/dashboard" />
+            <Logo variant="gradient" size="sm" to="/dashboard" className="flex-shrink-0" />
           </div>
         </div>
       </header>

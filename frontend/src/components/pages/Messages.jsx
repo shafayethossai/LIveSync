@@ -99,13 +99,28 @@ export default function Messages() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Logo variant="gradient" size="md" to="/dashboard" />
-            <nav className="flex items-center gap-4">
-              <Link to="/dashboard"><Button variant="ghost">Dashboard</Button></Link>
-              <Link to="/listings"><Button variant="ghost">Browse</Button></Link>
-              <Link to="/profile"><Button variant="outline">Profile</Button></Link>
+        <div className="w-full px-2 sm:px-4 lg:px-8 py-2 sm:py-4">
+          <div className="flex items-center justify-between gap-1 sm:gap-4">
+            <Logo variant="gradient" size="sm" to="/dashboard" className="flex-shrink-0" />
+            <nav className="flex items-center gap-0.5 sm:gap-3">
+              <Link to="/dashboard">
+                <Button variant="ghost" className="px-1.5 sm:px-3 py-1 sm:py-2 h-auto text-xs sm:text-sm">
+                  <span className="hidden sm:inline">Dashboard</span>
+                  <span className="sm:hidden">🏠</span>
+                </Button>
+              </Link>
+              <Link to="/listings">
+                <Button variant="ghost" className="px-1.5 sm:px-3 py-1 sm:py-2 h-auto text-xs sm:text-sm">
+                  <span className="hidden sm:inline">Browse</span>
+                  <span className="sm:hidden">🔍</span>
+                </Button>
+              </Link>
+              <Link to="/profile">
+                <Button variant="outline" className="px-1.5 sm:px-3 py-1 sm:py-2 h-auto text-xs sm:text-sm">
+                  <span className="hidden sm:inline">Profile</span>
+                  <span className="sm:hidden">👤</span>
+                </Button>
+              </Link>
             </nav>
           </div>
         </div>
