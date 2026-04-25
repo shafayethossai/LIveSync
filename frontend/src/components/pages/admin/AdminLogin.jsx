@@ -130,11 +130,11 @@ export default function AdminLogin() {
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-white/5 rounded-2xl text-sm border border-white/10">
+            {/* <div className="mt-6 p-4 bg-white/5 rounded-2xl text-sm border border-white/10">
               <p className="text-white/70 font-medium mb-2">Admin Credentials:</p>
               <p className="text-white/80 font-mono text-sm">Email: admin@livesync.com</p>
               <p className="text-white/80 font-mono text-sm">Password: admin123</p>
-            </div>
+            </div> */}
 
             <div className="mt-8 text-center">
               <Link to="/login" className="text-white/70 hover:text-white flex items-center justify-center gap-2">
