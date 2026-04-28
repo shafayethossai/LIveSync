@@ -32,6 +32,17 @@ type UserProfile struct {
 	CreatedAt string  `json:"created_at" db:"created_at"`
 }
 
+type AdminUser struct {
+	ID        int     `json:"id" db:"id"`
+	Name      string  `json:"name" db:"name"`
+	Email     string  `json:"email" db:"email"`
+	Phone     string  `json:"phone" db:"phone"`
+	Role      string  `json:"role" db:"role"`
+	IsActive  bool    `json:"is_active" db:"is_active"`
+	CreatedAt string  `json:"created_at" db:"created_at"`
+	LastLogin *string `json:"last_login" db:"last_login"`
+}
+
 type TemporarySignup struct {
 	ID           string      `json:"id" db:"id"`
 	Name         string      `json:"name" db:"name"`
@@ -50,6 +61,10 @@ type UserRepo interface {
 	FindByID(id string) (*User, error)
 	UpdateProfile(userID int, name, email, phone, avatarURL, role string) (*UserProfile, error)
 	GetProfileByID(userID int) (*UserProfile, error)
+	ActivateUser(userID int) (*AdminUser, error)
+	SuspendUser(userID int) (*AdminUser, error)
+	GetUserAdminByID(userID int) (*AdminUser, error)
+	GetAllUsers(limit, offset int) ([]AdminUser, int64, error)
 	SaveTemporarySignup(signup TemporarySignup) error
 	GetTemporarySignupByEmail(email string) (*TemporarySignup, error)
 	VerifyAndCreateUser(tempSignup TemporarySignup) (*User, error)
@@ -59,6 +74,7 @@ type UserRepo interface {
 	VerifyPasswordResetOTP(userID int, otp string) (bool, error)
 	UpdatePassword(userID int, newPassword string) error
 	ClearPasswordResetOTP(userID int) error
+	GetDashboardStats() (*DashboardStats, error)
 }
 
 type userRepo struct {
@@ -231,6 +247,117 @@ func (r *userRepo) GetProfileByID(userID int) (*UserProfile, error) {
 	}
 
 	return &profile, nil
+}
+
+func (r *userRepo) ActivateUser(userID int) (*AdminUser, error) {
+	var user AdminUser
+	query := `
+		UPDATE users
+		SET is_active = TRUE
+		WHERE id = $1
+		RETURNING id, name, email, phone, role, is_active, created_at, last_login
+	`
+
+	err := r.db.Get(&user, query, userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (r *userRepo) SuspendUser(userID int) (*AdminUser, error) {
+	var user AdminUser
+	query := `
+		UPDATE users
+		SET is_active = FALSE
+		WHERE id = $1
+		RETURNING id, name, email, phone, role, is_active, created_at, last_login
+	`
+
+	err := r.db.Get(&user, query, userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (r *userRepo) GetUserAdminByID(userID int) (*AdminUser, error) {
+	var user AdminUser
+	query := `
+		SELECT id, name, email, phone, role, is_active, created_at, last_login
+		FROM users
+		WHERE id = $1
+	`
+
+	err := r.db.Get(&user, query, userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (r *userRepo) GetAllUsers(limit, offset int) ([]AdminUser, int64, error) {
+	type userWithCount struct {
+		AdminUser
+		TotalCount int64 `db:"total_count"`
+	}
+
+	query := `
+		SELECT id, name, email, phone, role, is_active, created_at, last_login,
+			COUNT(*) OVER() AS total_count
+		FROM users
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	var rows []userWithCount
+	err := r.db.Select(&rows, query, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	users := make([]AdminUser, len(rows))
+	count := int64(0)
+	for i, row := range rows {
+		users[i] = row.AdminUser
+		if i == 0 {
+			count = row.TotalCount
+		}
+	}
+
+	return users, count, nil
+}
+
+func (r *userRepo) GetDashboardStats() (*DashboardStats, error) {
+	var stats DashboardStats
+	query := `
+		SELECT
+			(SELECT COUNT(*) FROM users) AS total_users,
+			(SELECT COUNT(*) FROM posts) AS total_posts,
+			(SELECT COUNT(*) FROM posts WHERE status = 'active') AS active_posts,
+			(SELECT COUNT(*) FROM posts WHERE status = 'inactive') AS inactive_posts,
+			(SELECT COUNT(*) FROM posts WHERE status = 'rejected') AS rejected_posts,
+			(SELECT COUNT(*) FROM messages) AS total_messages
+		`
+
+	err := r.db.Get(&stats, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
 }
 
 // SaveTemporarySignup saves signup data with OTP for verification

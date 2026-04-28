@@ -1,29 +1,22 @@
 package admin
 
 import (
-	"fmt"
 	"livesync-backend/util"
 	"net/http"
-
-	"github.com/jmoiron/sqlx"
+	"strconv"
 )
 
 // ActivateUser reactivates a user account
 func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
-	db := h.db.(*sqlx.DB)
-	userID := r.PathValue("userId")
-
-	query := `
-		UPDATE users 
-		SET is_active = TRUE
-		WHERE id = $1
-		RETURNING id, name, email, phone, role, is_active, created_at, last_login
-	`
-
-	var updatedUser UserData
-	err := db.Get(&updatedUser, query, userID)
+	userIDStr := r.PathValue("userId")
+	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
-		fmt.Println(err)
+		util.SendError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	updatedUser, err := h.userRepo.ActivateUser(userID)
+	if err != nil {
 		util.SendError(w, http.StatusNotFound, "User not found")
 		return
 	}

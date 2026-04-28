@@ -1,16 +1,16 @@
 package post
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	"livesync-backend/repo"
 	"livesync-backend/util"
-
-	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 )
 
 type CreatePostRequest struct {
@@ -34,43 +34,14 @@ type CreatePostRequest struct {
 	DistanceKm       float64  `json:"distance_km,omitempty"`
 }
 
-type PostResponse struct {
-	ID               int            `json:"id" db:"id"`
-	UserID           int            `json:"user_id" db:"user_id"`
-	Type             string         `json:"type" db:"type"`
-	PostType         string         `json:"post_type" db:"post_type"`
-	Area             string         `json:"area" db:"area"`
-	Description      string         `json:"description" db:"description"`
-	Images           pq.StringArray `json:"images" db:"images"`
-	Rooms            sql.NullInt64  `json:"rooms" db:"rooms"`
-	Rent             sql.NullInt64  `json:"rent" db:"rent"`
-	Budget           sql.NullInt64  `json:"budget" db:"budget"`
-	RentShare        sql.NullInt64  `json:"rent_share" db:"rent_share"`
-	Floor            sql.NullInt64  `json:"floor" db:"floor"`
-	Bathrooms        sql.NullInt64  `json:"bathrooms" db:"bathrooms"`
-	Balconies        sql.NullInt64  `json:"balconies" db:"balconies"`
-	HasLift          bool           `json:"has_lift" db:"has_lift"`
-	UtilityCost      sql.NullInt64  `json:"utility_cost" db:"utility_cost"`
-	AvailableFrom    sql.NullString `json:"available_from" db:"available_from"`
-	SharedFacilities sql.NullString `json:"shared_facilities" db:"shared_facilities"`
-	Status           string         `json:"status" db:"status"`
-	ViewsCount       int            `json:"views_count" db:"views_count"`
-	CreatedAt        string         `json:"created_at" db:"created_at"`
-	UpdatedAt        string         `json:"updated_at" db:"updated_at"`
-}
-
 // CreatePost creates a new post by the logged-in user
 func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	db := h.db.(*sqlx.DB)
-
-	// Get user ID from JWT token (set by middleware)
 	userID := r.Context().Value("userID")
 	if userID == nil {
 		util.SendError(w, http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
-	// Type assert userID to int
 	userIDInt, ok := userID.(int)
 	if !ok {
 		fmt.Println("Error: userID is not an integer:", userID)
@@ -79,24 +50,17 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req CreatePostRequest
-
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&req)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		fmt.Println("Error decoding request:", err)
 		util.SendError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	fmt.Printf("Creating post for userID: %v, area: %s, type: %s\n", userIDInt, req.Area, req.Type)
-
-	// Validate required fields
 	if req.Type == "" || req.PostType == "" || req.Area == "" || req.Description == "" {
 		util.SendError(w, http.StatusBadRequest, "Type, post_type, area, and description are required")
 		return
 	}
 
-	// Validate enum values
 	validTypes := map[string]bool{"family": true, "bachelor": true}
 	validPostTypes := map[string]bool{"offer": true, "requirement": true}
 	if !validTypes[req.Type] || !validPostTypes[req.PostType] {
@@ -104,116 +68,57 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create post in database
-	query := `
-		INSERT INTO posts (user_id, type, post_type, area, description, images, rooms, rent, budget, rent_share, floor, bathrooms, balconies, has_lift, utility_cost, available_from, shared_facilities, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'active')
-		RETURNING id, user_id, type, post_type, area, description, images, rooms, rent, budget, rent_share, floor, bathrooms, balconies, has_lift, utility_cost, available_from, shared_facilities, status, views_count, created_at, updated_at
-	`
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	var post PostResponse
-	imageArray := pq.Array(req.Images)
-	if len(req.Images) == 0 {
-		imageArray = pq.Array([]string{})
+	post := repo.Post{
+		UserID:           userIDInt,
+		Type:             req.Type,
+		PostType:         req.PostType,
+		Area:             req.Area,
+		Description:      req.Description,
+		Images:           req.Images,
+		Rooms:            nullableInt(req.Rooms),
+		Rent:             nullableInt(req.Rent),
+		Budget:           nullableInt(req.Budget),
+		RentShare:        nullableInt(req.RentShare),
+		Floor:            nullableInt(req.Floor),
+		Bathrooms:        nullableInt(req.Bathrooms),
+		Balconies:        nullableInt(req.Balconies),
+		HasLift:          req.HasLift,
+		UtilityCost:      nullableInt(req.UtilityCost),
+		AvailableFrom:    nullableString(req.AvailableFrom),
+		SharedFacilities: nullableString(req.SharedFacilities),
 	}
 
-	err = db.Get(&post, query,
-		userIDInt,
-		req.Type,
-		req.PostType,
-		req.Area,
-		req.Description,
-		imageArray,
-		nullableInt(req.Rooms),
-		nullableInt(req.Rent),
-		nullableInt(req.Budget),
-		nullableInt(req.RentShare),
-		nullableInt(req.Floor),
-		nullableInt(req.Bathrooms),
-		nullableInt(req.Balconies),
-		req.HasLift,
-		nullableInt(req.UtilityCost),
-		nullableString(req.AvailableFrom),
-		nullableString(req.SharedFacilities),
-	)
-
+	createdPost, err := h.postRepo.Create(ctx, post)
 	if err != nil {
 		fmt.Println("Error creating post:", err)
-		fmt.Printf("Error details: %v\n", err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to create post: "+err.Error())
 		return
 	}
 
-	fmt.Printf("Post created successfully for userID: %v, postID: %v\n", userIDInt, post.ID)
-
-	// Convert sql.Null types and array to regular values for JSON response
-	images := []string{}
-	if len(post.Images) > 0 {
-		images = post.Images
-	}
-
-	response := map[string]interface{}{
+	util.SendData(w, http.StatusCreated, map[string]interface{}{
 		"message": "Post created successfully",
-		"post": map[string]interface{}{
-			"id":                post.ID,
-			"user_id":           post.UserID,
-			"type":              post.Type,
-			"post_type":         post.PostType,
-			"area":              post.Area,
-			"description":       post.Description,
-			"images":            images,
-			"rooms":             nullInt64ToPtr(post.Rooms),
-			"rent":              nullInt64ToPtr(post.Rent),
-			"budget":            nullInt64ToPtr(post.Budget),
-			"rent_share":        nullInt64ToPtr(post.RentShare),
-			"floor":             nullInt64ToPtr(post.Floor),
-			"bathrooms":         nullInt64ToPtr(post.Bathrooms),
-			"balconies":         nullInt64ToPtr(post.Balconies),
-			"has_lift":          post.HasLift,
-			"utility_cost":      nullInt64ToPtr(post.UtilityCost),
-			"available_from":    nullStringToPtr(post.AvailableFrom),
-			"shared_facilities": nullStringToPtr(post.SharedFacilities),
-			"status":            post.Status,
-			"views_count":       post.ViewsCount,
-			"created_at":        post.CreatedAt,
-			"updated_at":        post.UpdatedAt,
-		},
-	}
-
-	util.SendData(w, http.StatusCreated, response)
+		"post":    convertPostToResponse(createdPost),
+	})
 }
 
-// Helper functions to handle nullable integers and strings
-func nullableInt(val int) interface{} {
-	if val == 0 {
-		return nil
+func nullableInt(value int) sql.NullInt64 {
+	if value == 0 {
+		return sql.NullInt64{}
 	}
-	return val
+	return sql.NullInt64{Int64: int64(value), Valid: true}
 }
 
-func nullableString(val string) interface{} {
-	if strings.TrimSpace(val) == "" {
-		return nil
+func nullableString(value string) sql.NullString {
+	if strings.TrimSpace(value) == "" {
+		return sql.NullString{}
 	}
-	return val
+	return sql.NullString{String: value, Valid: true}
 }
 
-func nullInt64ToPtr(val sql.NullInt64) interface{} {
-	if !val.Valid {
-		return nil
-	}
-	return val.Int64
-}
-
-func nullStringToPtr(val sql.NullString) interface{} {
-	if !val.Valid {
-		return nil
-	}
-	return val.String
-}
-
-// convertPostToResponse converts a PostResponse struct to a clean map for JSON
-func convertPostToResponse(post PostResponse) map[string]interface{} {
+func convertPostToResponse(post *repo.Post) map[string]interface{} {
 	images := []string{}
 	if len(post.Images) > 0 {
 		images = post.Images
@@ -243,4 +148,18 @@ func convertPostToResponse(post PostResponse) map[string]interface{} {
 		"created_at":        post.CreatedAt,
 		"updated_at":        post.UpdatedAt,
 	}
+}
+
+func nullInt64ToPtr(value sql.NullInt64) interface{} {
+	if !value.Valid {
+		return nil
+	}
+	return value.Int64
+}
+
+func nullStringToPtr(value sql.NullString) interface{} {
+	if !value.Valid {
+		return nil
+	}
+	return value.String
 }

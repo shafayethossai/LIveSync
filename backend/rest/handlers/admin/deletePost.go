@@ -1,35 +1,40 @@
 package admin
 
 import (
+	"context"
 	"fmt"
+	"livesync-backend/repo"
 	"livesync-backend/util"
 	"net/http"
-
-	"github.com/jmoiron/sqlx"
+	"strconv"
+	"time"
 )
 
 // DeletePost deletes a post
 func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
-	db := h.db.(*sqlx.DB)
-	postID := r.PathValue("postId")
-
-	query := `
-		DELETE FROM posts 
-		WHERE id = $1
-		RETURNING id
-	`
-
-	var deletedID int
-	err := db.Get(&deletedID, query, postID)
+	postIDStr := r.PathValue("postId")
+	postID, err := strconv.Atoi(postIDStr)
 	if err != nil {
-		fmt.Println(err)
-		util.SendError(w, http.StatusNotFound, "Post not found")
+		util.SendError(w, http.StatusBadRequest, "Invalid post ID")
 		return
 	}
 
-	response := map[string]interface{}{
-		"message": "Post deleted successfully",
-		"post_id": deletedID,
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = h.postRepo.DeleteByID(ctx, postID)
+	if err != nil {
+		if err == repo.ErrPostNotFound {
+			util.SendError(w, http.StatusNotFound, "Post not found")
+			return
+		}
+		fmt.Println("Error deleting post:", err)
+		util.SendError(w, http.StatusInternalServerError, "Failed to delete post")
+		return
 	}
-	util.SendData(w, http.StatusOK, response)
+
+	util.SendData(w, http.StatusOK, map[string]interface{}{
+		"message": "Post deleted successfully",
+		"post_id": postID,
+	})
 }

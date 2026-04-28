@@ -20,6 +20,15 @@ type Admin struct {
 	LastLogin    *string `json:"last_login" db:"last_login"`
 }
 
+type DashboardStats struct {
+	TotalUsers    int64 `json:"total_users" db:"total_users"`
+	TotalPosts    int64 `json:"total_posts" db:"total_posts"`
+	ActivePosts   int64 `json:"active_posts" db:"active_posts"`
+	InactivePosts int64 `json:"inactive_posts" db:"inactive_posts"`
+	RejectedPosts int64 `json:"rejected_posts" db:"rejected_posts"`
+	TotalMessages int64 `json:"total_messages" db:"total_messages"`
+}
+
 type AdminRepo interface {
 	Create(admin Admin) (*Admin, error)
 	FindByEmail(email string, password string) (*Admin, error)

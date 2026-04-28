@@ -1,16 +1,16 @@
 package post
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
+	"livesync-backend/repo"
 	"livesync-backend/util"
-
-	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 )
 
 type UpdatePostRequest struct {
@@ -26,7 +26,7 @@ type UpdatePostRequest struct {
 	Floor            int      `json:"floor,omitempty"`
 	Bathrooms        int      `json:"bathrooms,omitempty"`
 	Balconies        int      `json:"balconies,omitempty"`
-	HasLift          bool     `json:"has_lift,omitempty"`
+	HasLift          *bool    `json:"has_lift,omitempty"`
 	UtilityCost      int      `json:"utility_cost,omitempty"`
 	AvailableFrom    string   `json:"available_from,omitempty"`
 	SharedFacilities string   `json:"shared_facilities,omitempty"`
@@ -34,16 +34,12 @@ type UpdatePostRequest struct {
 
 // UpdatePost updates a post (only owner can update their own post)
 func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
-	db := h.db.(*sqlx.DB)
-
-	// Get user ID from JWT token (set by middleware)
 	userID := r.Context().Value("userID")
 	if userID == nil {
 		util.SendError(w, http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
-	// Type assert userID to int
 	userIDInt, ok := userID.(int)
 	if !ok {
 		fmt.Println("Error: userID is not an integer:", userID)
@@ -51,7 +47,6 @@ func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get post ID from URL path
 	postIDStr := r.PathValue("id")
 	postID, err := strconv.Atoi(postIDStr)
 	if err != nil {
@@ -59,116 +54,100 @@ func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if post exists and belongs to current user
-	var ownerID int
-	err = db.Get(&ownerID, "SELECT user_id FROM posts WHERE id = $1", postID)
-	if err != nil {
-		fmt.Println("Error fetching post:", err)
-		util.SendError(w, http.StatusNotFound, "Post not found")
-		return
-	}
-
-	// Check ownership
-	if ownerID != userIDInt {
-		util.SendError(w, http.StatusForbidden, "You can only update your own posts")
-		return
-	}
-
 	var req UpdatePostRequest
-
-	decoder := json.NewDecoder(r.Body)
-	err = decoder.Decode(&req)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		fmt.Println("Error decoding request:", err)
 		util.SendError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	fmt.Printf("Updating post ID: %v for userID: %v\n", postID, userID)
-
-	// Build dynamic update query
-	query := `UPDATE posts SET `
-	args := []interface{}{}
-	paramCount := 1
-
-	if req.Type != "" {
-		query += fmt.Sprintf("type = $%d, ", paramCount)
-		args = append(args, req.Type)
-		paramCount++
+	if req.Type == "" && req.PostType == "" && req.Area == "" && req.Description == "" && len(req.Images) == 0 && req.Rooms == 0 && req.Rent == 0 && req.Budget == 0 && req.RentShare == 0 && req.Floor == 0 && req.Bathrooms == 0 && req.Balconies == 0 && req.HasLift == nil && strings.TrimSpace(req.AvailableFrom) == "" && strings.TrimSpace(req.SharedFacilities) == "" {
+		util.SendError(w, http.StatusBadRequest, "No fields provided for update")
+		return
 	}
 
-	if req.Area != "" {
-		query += fmt.Sprintf("area = $%d, ", paramCount)
-		args = append(args, req.Area)
-		paramCount++
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	if req.Description != "" {
-		query += fmt.Sprintf("description = $%d, ", paramCount)
-		args = append(args, req.Description)
-		paramCount++
-	}
-
-	if len(req.Images) > 0 {
-		query += fmt.Sprintf("images = $%d, ", paramCount)
-		args = append(args, pq.Array(req.Images))
-		paramCount++
-	}
-
-	if req.Rooms > 0 {
-		query += fmt.Sprintf("rooms = $%d, ", paramCount)
-		args = append(args, req.Rooms)
-		paramCount++
-	}
-
-	if req.Rent > 0 {
-		query += fmt.Sprintf("rent = $%d, ", paramCount)
-		args = append(args, req.Rent)
-		paramCount++
-	}
-
-	if req.Budget > 0 {
-		query += fmt.Sprintf("budget = $%d, ", paramCount)
-		args = append(args, req.Budget)
-		paramCount++
-	}
-
-	if req.RentShare > 0 {
-		query += fmt.Sprintf("rent_share = $%d, ", paramCount)
-		args = append(args, req.RentShare)
-		paramCount++
-	}
-
-	if strings.TrimSpace(req.AvailableFrom) != "" {
-		query += fmt.Sprintf("available_from = $%d, ", paramCount)
-		args = append(args, req.AvailableFrom)
-		paramCount++
-	}
-
-	if strings.TrimSpace(req.SharedFacilities) != "" {
-		query += fmt.Sprintf("shared_facilities = $%d, ", paramCount)
-		args = append(args, req.SharedFacilities)
-		paramCount++
-	}
-
-	// Add updated_at
-	query += fmt.Sprintf("updated_at = CURRENT_TIMESTAMP WHERE id = $%d RETURNING id, user_id, type, post_type, area, description, images, rooms, rent, budget, rent_share, floor, bathrooms, balconies, has_lift, utility_cost, available_from, shared_facilities, status, views_count, created_at, updated_at", paramCount)
-	args = append(args, postID)
-
-	var post PostResponse
-	err = db.Get(&post, query, args...)
+	ownerID, err := h.postRepo.GetOwnerID(ctx, postID)
 	if err != nil {
+		if err == repo.ErrPostNotFound {
+			util.SendError(w, http.StatusNotFound, "Post not found")
+			return
+		}
+		fmt.Println("Error fetching post owner:", err)
+		util.SendError(w, http.StatusInternalServerError, "Failed to check post ownership")
+		return
+	}
+
+	if ownerID != userIDInt {
+		util.SendError(w, http.StatusForbidden, "You can only update your own posts")
+		return
+	}
+
+	fields := repo.PostUpdateFields{}
+	if req.Type != "" {
+		fields.Type = &req.Type
+	}
+	if req.PostType != "" {
+		fields.PostType = &req.PostType
+	}
+	if req.Area != "" {
+		fields.Area = &req.Area
+	}
+	if req.Description != "" {
+		fields.Description = &req.Description
+	}
+	if len(req.Images) > 0 {
+		fields.Images = &req.Images
+	}
+	if req.Rooms > 0 {
+		fields.Rooms = &req.Rooms
+	}
+	if req.Rent > 0 {
+		fields.Rent = &req.Rent
+	}
+	if req.Budget > 0 {
+		fields.Budget = &req.Budget
+	}
+	if req.RentShare > 0 {
+		fields.RentShare = &req.RentShare
+	}
+	if req.Floor > 0 {
+		fields.Floor = &req.Floor
+	}
+	if req.Bathrooms > 0 {
+		fields.Bathrooms = &req.Bathrooms
+	}
+	if req.Balconies > 0 {
+		fields.Balconies = &req.Balconies
+	}
+	if req.HasLift != nil {
+		fields.HasLift = req.HasLift
+	}
+	if req.UtilityCost > 0 {
+		fields.UtilityCost = &req.UtilityCost
+	}
+	if strings.TrimSpace(req.AvailableFrom) != "" {
+		fields.AvailableFrom = &req.AvailableFrom
+	}
+	if strings.TrimSpace(req.SharedFacilities) != "" {
+		fields.SharedFacilities = &req.SharedFacilities
+	}
+
+	updatedPost, err := h.postRepo.UpdateByIDAndOwner(ctx, postID, userIDInt, fields)
+	if err != nil {
+		if err == repo.ErrPostNotFound {
+			util.SendError(w, http.StatusNotFound, "Post not found")
+			return
+		}
 		fmt.Println("Error updating post:", err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to update post")
 		return
 	}
 
-	fmt.Printf("Post updated successfully for postID: %v\n", postID)
-
-	response := map[string]interface{}{
+	util.SendData(w, http.StatusOK, map[string]interface{}{
 		"message": "Post updated successfully",
-		"post":    convertPostToResponse(post),
-	}
-
-	util.SendData(w, http.StatusOK, response)
+		"post":    convertPostToResponse(updatedPost),
+	})
 }

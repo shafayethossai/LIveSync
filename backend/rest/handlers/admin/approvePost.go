@@ -1,40 +1,41 @@
 package admin
 
 import (
+	"context"
 	"fmt"
+	"livesync-backend/repo"
 	"livesync-backend/util"
 	"net/http"
-
-	"github.com/jmoiron/sqlx"
+	"strconv"
+	"time"
 )
 
 // ApprovePost marks a post as active
 func (h *Handler) ApprovePost(w http.ResponseWriter, r *http.Request) {
-	db := h.db.(*sqlx.DB)
-	postID := r.PathValue("postId")
-
-	query := `
-		UPDATE posts 
-		SET status = 'active'
-		WHERE id = $1
-		RETURNING id, status
-	`
-
-	var updatedPost struct {
-		ID     string `db:"id"`
-		Status string `db:"status"`
-	}
-	err := db.Get(&updatedPost, query, postID)
+	postIDStr := r.PathValue("postId")
+	postID, err := strconv.Atoi(postIDStr)
 	if err != nil {
-		fmt.Println(err)
-		util.SendError(w, http.StatusNotFound, "Post not found")
+		util.SendError(w, http.StatusBadRequest, "Invalid post ID")
 		return
 	}
 
-	response := map[string]interface{}{
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	updatedPost, err := h.postRepo.SetStatus(ctx, postID, "active")
+	if err != nil {
+		if err == repo.ErrPostNotFound {
+			util.SendError(w, http.StatusNotFound, "Post not found")
+			return
+		}
+		fmt.Println("Error approving post:", err)
+		util.SendError(w, http.StatusInternalServerError, "Failed to approve post")
+		return
+	}
+
+	util.SendData(w, http.StatusOK, map[string]interface{}{
 		"message": "Post approved successfully",
 		"post_id": updatedPost.ID,
 		"status":  updatedPost.Status,
-	}
-	util.SendData(w, http.StatusOK, response)
+	})
 }

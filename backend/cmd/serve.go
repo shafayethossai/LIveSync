@@ -36,14 +36,15 @@ func Serve() {
 	middleware := middlewares.NewMiddleware(cnf)
 	userRepo := repo.NewUserRepo(dbCon)
 	adminRepo := repo.NewAdminRepo(dbCon)
+	postRepo := repo.NewPostRepo(dbCon)
 	messageRepo := repo.NewMessageRepo(dbCon)
 	socketManager := socket.GetManager()
 	socketHandler := socket.NewHandler(cnf, socketManager)
 
 	// handlers
 	userHandler := userHandler.NewHandler(cnf, userRepo, middleware, dbCon)
-	adminHandler := adminHandler.NewHandler(cnf, adminRepo, userRepo, middleware, dbCon)
-	postHandler := postHandler.NewHandler(cnf, middleware, dbCon)
+	adminHandler := adminHandler.NewHandler(cnf, adminRepo, userRepo, postRepo, middleware, dbCon)
+	postHandler := postHandler.NewHandler(cnf, postRepo, middleware)
 	messageHandler := messageHandler.NewHandler(cnf, messageRepo, middleware, socketManager)
 
 	server := rest.NewServer(
