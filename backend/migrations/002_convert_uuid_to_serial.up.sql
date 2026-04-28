@@ -66,15 +66,6 @@ CREATE TABLE messages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- -- 4. Favorites Table (with SERIAL ID)
--- CREATE TABLE favorites (
---     id SERIAL PRIMARY KEY,
---     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
---     post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
---     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
---     UNIQUE(user_id, post_id)
--- );
-
 -- 5. Admin Users Table
 CREATE TABLE admin_users (
     id SERIAL PRIMARY KEY,
@@ -96,7 +87,6 @@ CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
 
 -- +migrate Down
 
-DROP TABLE IF EXISTS favorites;
 DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS posts;
 DROP TABLE IF EXISTS users;

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || "https://livesync-cvy2.onrender.com"}/api`, // This is where your Go backend will run
+  baseURL: `${import.meta.env.VITE_API_URL || "https://livesync-46l3.onrender.com"}/api`, // This is where your Go backend will run
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
