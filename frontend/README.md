@@ -1,1 +1,1 @@
-task : fix all bug so that project run perfectly
+task : in frontend listings.jsx and post details taking many time to load. maximum time it can not load and show error "failed to load listing".

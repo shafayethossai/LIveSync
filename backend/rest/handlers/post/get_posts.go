@@ -1,9 +1,11 @@
 package post
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"livesync-backend/util"
 
@@ -37,6 +39,10 @@ func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 
 	offset := (pageNum - 1) * limitNum
 
+	// Create context with 10 second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	// Use window function to get total count in same query
 	query := `
 		SELECT 
@@ -57,9 +63,9 @@ func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var postsWithCount []PostResponseWithCount
-	err := db.Select(&postsWithCount, query, limitNum, offset)
+	err := db.SelectContext(ctx, &postsWithCount, query, limitNum, offset)
 	if err != nil {
-		fmt.Println("Error fetching posts:", err)
+		fmt.Println("Error fetching posts (page=%d, limit=%d):", page, limit, err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to fetch posts")
 		return
 	}
@@ -103,10 +109,16 @@ func (h *Handler) GetPostByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Increment views count
+	// Increment views count with timeout (non-blocking)
 	go func() {
-		db.Exec("UPDATE posts SET views_count = views_count + 1 WHERE id = $1", postID)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		db.ExecContext(ctx, "UPDATE posts SET views_count = views_count + 1 WHERE id = $1", postID)
 	}()
+
+	// Create context with 10 second timeout for fetch
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	// Fetch post
 	query := `
@@ -116,9 +128,9 @@ func (h *Handler) GetPostByID(w http.ResponseWriter, r *http.Request) {
 	`
 
 	var post PostResponse
-	err = db.Get(&post, query, postID)
+	err = db.GetContext(ctx, &post, query, postID)
 	if err != nil {
-		fmt.Println("Error fetching post:", err)
+		fmt.Println("Error fetching post (id=%d):", postID, err)
 		util.SendError(w, http.StatusNotFound, "Post not found")
 		return
 	}
@@ -168,6 +180,10 @@ func (h *Handler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 
 	offset := (pageNum - 1) * limitNum
 
+	// Create context with 10 second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	// Use window function to get total count in same query
 	query := `
 		SELECT 
@@ -188,9 +204,9 @@ func (h *Handler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var postsWithCount []PostResponseWithCount
-	err := db.Select(&postsWithCount, query, userIDInt, limitNum, offset)
+	err := db.SelectContext(ctx, &postsWithCount, query, userIDInt, limitNum, offset)
 	if err != nil {
-		fmt.Println("Error fetching user posts:", err)
+		fmt.Println("Error fetching user posts (userID=%d, page=%s, limit=%s):", userIDInt, page, limit, err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to fetch posts")
 		return
 	}

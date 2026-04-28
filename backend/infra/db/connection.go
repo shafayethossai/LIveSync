@@ -33,6 +33,11 @@ func NewConnection(connectionString string) (*sqlx.DB, error) {
 		return nil, err
 	}
 
+	// Configure connection pool for stability and performance
+	dbCon.SetMaxOpenConns(25)        // Max concurrent connections
+	dbCon.SetMaxIdleConns(5)         // Keep 5 idle connections ready
+	dbCon.SetConnMaxLifetime(5 * 60) // 5 minute connection lifetime
+
 	fmt.Println("✅ Successfully connected to PostgreSQL")
 	return dbCon, nil
 }

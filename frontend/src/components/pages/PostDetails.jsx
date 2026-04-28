@@ -7,7 +7,7 @@ import api from '../../services/api';                    // ← Real API
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { ArrowLeft, MapPin, Bed, Bath, Wind, Building2, Users, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Bed, Bath, Wind, Building2, Users, ChevronLeft, ChevronRight, MessageCircle, Loader, RotateCcw } from 'lucide-react';
 
 export default function PostDetails() {
   const { id } = useParams();
@@ -18,24 +18,46 @@ export default function PostDetails() {
 
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [retrying, setRetrying] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const isFromAdmin = searchParams.get('from') === 'admin' || admin;
 
-  useEffect(() => {
-    const fetchPost = async () => {
-      try {
-        const response = await api.get(`/posts/${id}`);
-        setPost(response.data);
-      } catch (error) {
-        console.error("Failed to fetch post", error);
-      } finally {
+  // Fetch post with retry logic
+  const fetchPost = async (attempts = 0) => {
+    try {
+      setError('');
+      setRetrying(attempts > 0);
+      const response = await api.get(`/posts/${id}`);
+      setPost(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Failed to fetch post", error);
+      
+      // Retry logic: exponential backoff (1s, 2s, 4s)
+      if (attempts < 2) {
+        const delay = Math.pow(2, attempts) * 1000;
+        console.log(`Retrying in ${delay}ms... (attempt ${attempts + 1})`);
+        setTimeout(() => {
+          fetchPost(attempts + 1);
+        }, delay);
+      } else {
+        setError('Failed to load post. Please check your connection and try again.');
+        setPost(null);
         setLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchPost();
   }, [id]);
+
+  const handleRetry = () => {
+    setLoading(true);
+    fetchPost();
+  };
 
   const handleMessageOwner = () => {
     if (!user) {
@@ -51,7 +73,44 @@ export default function PostDetails() {
   const nextImage = () => setCurrentImageIndex((prev) => (prev + 1) % (post?.images?.length || 1));
   const prevImage = () => setCurrentImageIndex((prev) => (prev - 1 + (post?.images?.length || 1)) % (post?.images?.length || 1));
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading post...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 text-lg">Loading post details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
+        <div className="text-center bg-white rounded-2xl shadow-lg p-8 max-w-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Unable to Load Post</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={handleRetry}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              {loading ? 'Retrying...' : 'Try Again'}
+            </Button>
+            <Button
+              onClick={() => navigate(isFromAdmin ? '/admin/posts' : '/listings')}
+              variant="outline"
+            >
+              Back to {isFromAdmin ? 'Posts' : 'Listings'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!post) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
