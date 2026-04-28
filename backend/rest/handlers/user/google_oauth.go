@@ -258,15 +258,7 @@ func extractGoogleTokenInfo(idToken string) (*GoogleUserInfo, error) {
 	// Decode the payload (second part)
 	payload := parts[1]
 
-	// Add padding if needed
-	switch len(payload) % 4 {
-	case 2:
-		payload += "=="
-	case 3:
-		payload += "="
-	}
-
-	// Use standard base64 decoding with URL encoding
+	// JWT payloads use unpadded base64url encoding — decode as raw URL encoding
 	decoded, err := base64.RawURLEncoding.DecodeString(payload)
 	if err != nil {
 		log.Printf("Failed to decode payload: %v", err)
