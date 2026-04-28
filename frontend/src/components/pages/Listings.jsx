@@ -175,6 +175,36 @@ export default function Listings() {
                 <SelectItem value="no">Without Lift</SelectItem>
               </SelectContent>
             </Select>
+
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              placeholder="Min rent"
+              value={minRent}
+              onChange={(e) => setMinRent(e.target.value)}
+              className="rounded-lg"
+            />
+
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              placeholder="Max rent"
+              value={maxRent}
+              onChange={(e) => setMaxRent(e.target.value)}
+              className="rounded-lg"
+            />
+
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              placeholder="Min rooms"
+              value={minRooms}
+              onChange={(e) => setMinRooms(e.target.value)}
+              className="rounded-lg"
+            />
           </div>
         </div>
       </div>

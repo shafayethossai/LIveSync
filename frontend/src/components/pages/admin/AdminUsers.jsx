@@ -173,7 +173,9 @@ export default function AdminUsers() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="w-10 h-10">
-                          <AvatarImage src={user.photo} />
+                          {user.photo && user.photo.trim() !== '' ? (
+                            <AvatarImage src={user.photo} alt={user.name} />
+                          ) : null}
                           <AvatarFallback className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold">
                             {(user.name || '').charAt(0).toUpperCase()}
                           </AvatarFallback>

@@ -150,9 +150,26 @@ export default function PostDetails() {
                   <AvatarFallback>{post.userName?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-semibold">{post.userName}</div>
-                  <div className="text-sm text-gray-500">
-                    {new Date(post.createdAt).toLocaleDateString()}
+                  <div className="font-semibold text-gray-900">{post.userName}</div>
+                  <div className="text-xs uppercase tracking-[0.22em] text-slate-400 mb-1">Posted on</div>
+                  <div className="text-sm text-slate-600">
+                    {(() => {
+                      const rawDate = post.createdAt || post.created_at;
+                      const date = rawDate ? new Date(rawDate) : null;
+                      if (!date || Number.isNaN(date.getTime())) {
+                        return 'Date unavailable';
+                      }
+
+                      return date.toLocaleString(undefined, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      }).replace(',', ' ·');
+                    })()}
                   </div>
                 </div>
               </div>

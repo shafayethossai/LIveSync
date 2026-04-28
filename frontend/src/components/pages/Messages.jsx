@@ -73,7 +73,6 @@ export default function Messages() {
 
       await api.post('/messages', newMessage);
 
-      // Update UI optimistically
       const updatedConv = {
         ...selectedConversation,
         messages: [...(selectedConversation.messages || []), {
@@ -89,8 +88,8 @@ export default function Messages() {
       ));
       setSelectedConversation(updatedConv);
       setMessageText('');
-    } catch (err) {
-      alert("Failed to send message");
+    } catch (error) {
+      alert("Failed to send message", error);
     } finally {
       setLoading(false);
     }
@@ -127,12 +126,13 @@ export default function Messages() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
+        <div className="bg-white rounded-[32px] shadow-2xl border border-slate-200 overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
           <div className="grid md:grid-cols-3 h-full">
             {/* Conversations List */}
-            <div className="border-r overflow-y-auto">
-              <div className="p-4 border-b">
-                <h2 className="text-xl font-bold">Messages</h2>
+            <div className="border-r border-slate-200 overflow-y-auto bg-slate-50">
+              <div className="p-5 border-b border-slate-200 bg-white">
+                <h2 className="text-xl font-semibold tracking-tight">Messages</h2>
+                <p className="text-sm text-slate-500 mt-1">Keep the conversation flowing.</p>
               </div>
               {conversations.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
@@ -144,15 +144,16 @@ export default function Messages() {
                   <button
                     key={conv.userId}
                     onClick={() => setSelectedConversation(conv)}
-                    className={`w-full p-4 border-b hover:bg-gray-50 text-left ${selectedConversation?.userId === conv.userId ? 'bg-blue-50' : ''}`}
+                    className={`w-full p-4 border-b border-slate-200 text-left transition-colors duration-200 ${selectedConversation?.userId === conv.userId ? 'bg-white shadow-sm' : 'hover:bg-slate-100'}`}
                   >
                     <div className="flex items-center gap-3">
-                      <Avatar>
+                      <Avatar className="shadow-sm ring-1 ring-slate-200">
                         <AvatarImage src={conv.userPhoto} />
                         <AvatarFallback>{conv.userName?.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold truncate">{conv.userName}</div>
+                        <div className="font-semibold truncate text-slate-900">{conv.userName}</div>
+                        <div className="text-sm text-slate-500 truncate">{conv.lastMessage || 'Tap to open chat'}</div>
                       </div>
                     </div>
                   </button>
@@ -164,25 +165,28 @@ export default function Messages() {
             <div className="md:col-span-2 flex flex-col">
               {selectedConversation ? (
                 <>
-                  <div className="p-4 border-b flex items-center gap-3">
-                    <Avatar>
+                  <div className="p-5 border-b border-slate-200 flex items-center gap-4 bg-slate-50">
+                    <Avatar className="shadow-sm ring-1 ring-slate-200">
                       <AvatarImage src={selectedConversation.userPhoto} />
                       <AvatarFallback>{selectedConversation.userName?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-semibold">{selectedConversation.userName}</div>
-                      <div className="text-sm text-gray-500">Online</div>
+                      <div className="font-semibold text-slate-900">{selectedConversation.userName}</div>
+                      <div className="text-sm text-emerald-600 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                        Online
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-slate-50 via-white to-slate-50">
                     {(selectedConversation.messages || []).map((msg) => (
                       <div key={msg.id} className={`flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${msg.senderId === user.id 
-                          ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white' 
-                          : 'bg-gray-100 text-gray-900'}`}>
-                          <p>{msg.content}</p>
-                          <p className="text-xs mt-1 opacity-70">
+                        <div className={`max-w-[85%] px-4 py-3 rounded-[28px] shadow-sm ${msg.senderId === user.id 
+                          ? 'bg-gradient-to-r from-sky-600 to-emerald-500 text-white rounded-br-none' 
+                          : 'bg-slate-100 text-slate-900 rounded-bl-none'}`}>
+                          <p className="text-sm leading-6">{msg.content}</p>
+                          <p className={`text-[11px] mt-2 ${msg.senderId === user.id ? 'text-sky-100/90' : 'text-slate-500'}`}>
                             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
@@ -190,21 +194,21 @@ export default function Messages() {
                     ))}
                   </div>
 
-                  <div className="p-4 border-t">
-                    <div className="flex gap-2">
+                  <div className="p-5 border-t border-slate-200 bg-white">
+                    <div className="flex gap-3 items-center">
                       <Input
                         value={messageText}
                         onChange={(e) => setMessageText(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Type a message..."
-                        className="flex-1"
+                        placeholder="Type your message..."
+                        className="flex-1 rounded-full border border-slate-200 bg-slate-100 shadow-sm px-4 py-3"
                       />
                       <Button 
                         onClick={handleSendMessage} 
                         disabled={loading || !messageText.trim()}
-                        className="bg-gradient-to-r from-blue-600 to-green-600"
+                        className="rounded-full w-14 h-14 p-0 bg-gradient-to-r from-blue-600 to-green-600 shadow-lg"
                       >
-                        <Send className="w-4 h-4" />
+                        <Send className="w-5 h-5" />
                       </Button>
                     </div>
                   </div>
