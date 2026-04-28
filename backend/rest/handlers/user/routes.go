@@ -68,14 +68,14 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, manager *middlewares.Manage
 
 	// Google OAuth routes
 	mux.Handle(
-		"GET /api/auth/google/callback",
+		"POST /api/auth/google/callback",
 		manager.With(
 			http.HandlerFunc(h.GoogleCallback),
 		),
 	)
 
 	mux.Handle(
-		"GET /api/auth/google/signin",
+		"POST /api/auth/google/signin",
 		manager.With(
 			http.HandlerFunc(h.GoogleSignIn),
 		),

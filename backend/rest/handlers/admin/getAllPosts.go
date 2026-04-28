@@ -29,7 +29,7 @@ type AdminPostData struct {
 	UserEmail        string         `json:"user_email" db:"user_email"`
 }
 
-// GetAllPosts returns paginated list of all posts
+// GetAllPosts returns paginated list of all posts - optimized single query
 func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 	db := h.db.(*sqlx.DB)
 
@@ -52,10 +52,12 @@ func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 
 	offset := (page - 1) * limit
 
+	// Build query with window function for total count
 	query := `
 		SELECT p.id, p.user_id, p.type, p.post_type, p.area, p.description, p.images, p.rooms, 
 		       p.rent, p.budget, p.status, p.views_count, p.created_at,
-		       u.name as user_name, u.email as user_email
+		       u.name as user_name, u.email as user_email,
+		       COUNT(*) OVER() AS total_count
 		FROM posts p
 		JOIN users u ON p.user_id = u.id
 	`
@@ -69,21 +71,34 @@ func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 			args = append(args, limit, offset)
 		}
 	} else {
-		query += " ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
-		args = append(args, limit, offset)
+		if limit != 0 {
+			query += " ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
+			args = append(args, limit, offset)
+		}
 	}
 
-	var posts []AdminPostData
-	err := db.Select(&posts, query, args...)
+	// Temporary struct to include total count
+	type AdminPostDataWithCount struct {
+		AdminPostData
+		TotalCount int64 `db:"total_count"`
+	}
+
+	var postsWithCount []AdminPostDataWithCount
+	err := db.Select(&postsWithCount, query, args...)
 	if err != nil {
 		fmt.Println(err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to fetch posts")
 		return
 	}
 
+	count := int64(0)
+	if len(postsWithCount) > 0 {
+		count = postsWithCount[0].TotalCount
+	}
+
 	// Convert posts to clean response format
-	cleanPosts := make([]map[string]interface{}, len(posts))
-	for i, post := range posts {
+	cleanPosts := make([]map[string]interface{}, len(postsWithCount))
+	for i, post := range postsWithCount {
 		images := []string{}
 		if len(post.Images) > 0 {
 			images = post.Images
@@ -106,16 +121,6 @@ func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 			"user_name":    post.UserName,
 			"user_email":   post.UserEmail,
 		}
-	}
-
-	// Get total count
-	var count int64
-	countQuery := "SELECT COUNT(*) FROM posts"
-	if status != "" {
-		countQuery += " WHERE status = $1"
-		db.Get(&count, countQuery, status)
-	} else {
-		db.Get(&count, countQuery)
 	}
 
 	response := map[string]interface{}{

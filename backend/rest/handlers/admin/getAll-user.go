@@ -20,7 +20,7 @@ type UserData struct {
 	LastLogin *string `json:"last_login" db:"last_login"`
 }
 
-// GetAllUsers returns paginated list of all users
+// GetAllUsers returns paginated list of all users - optimized single query
 func (h *Handler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	db := h.db.(*sqlx.DB)
 
@@ -40,24 +40,40 @@ func (h *Handler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 	offset := (page - 1) * limit
 
+	// Use window function to get total count in same query
 	query := `
-		SELECT id, name, email, phone, role, is_active, created_at, last_login
+		SELECT 
+			id, name, email, phone, role, is_active, created_at, last_login,
+			COUNT(*) OVER() AS total_count
 		FROM users
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
 	`
 
-	var users []UserData
-	err := db.Select(&users, query, limit, offset)
+	// Temporary struct to hold the total_count from the query
+	type UserDataWithCount struct {
+		UserData
+		TotalCount int64 `db:"total_count"`
+	}
+
+	var usersWithCount []UserDataWithCount
+	err := db.Select(&usersWithCount, query, limit, offset)
 	if err != nil {
 		fmt.Println(err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to fetch users")
 		return
 	}
 
-	// Get total count
-	var count int64
-	db.Get(&count, "SELECT COUNT(*) FROM users")
+	count := int64(0)
+	if len(usersWithCount) > 0 {
+		count = usersWithCount[0].TotalCount
+	}
+
+	// Extract just the users
+	users := make([]UserData, len(usersWithCount))
+	for i, u := range usersWithCount {
+		users[i] = u.UserData
+	}
 
 	response := map[string]interface{}{
 		"users": users,

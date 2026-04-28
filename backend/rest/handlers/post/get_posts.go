@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// GetAllPosts returns all active posts with pagination
+// GetAllPosts returns all active posts with pagination - optimized single query
 func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 	db := h.db.(*sqlx.DB)
 
@@ -37,38 +37,46 @@ func (h *Handler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 
 	offset := (pageNum - 1) * limitNum
 
-	// Get total count
-	var totalCount int
-	err := db.Get(&totalCount, "SELECT COUNT(*) FROM posts WHERE status = 'active'")
-	if err != nil {
-		fmt.Println("Error counting posts:", err)
-	}
-
-	// Fetch posts
+	// Use window function to get total count in same query
 	query := `
-		SELECT id, user_id, type, post_type, area, description, images, rooms, rent, budget, rent_share, floor, bathrooms, balconies, has_lift, utility_cost, available_from, shared_facilities, status, views_count, created_at, updated_at
+		SELECT 
+			id, user_id, type, post_type, area, description, images, rooms, rent, budget, 
+			rent_share, floor, bathrooms, balconies, has_lift, utility_cost, available_from, 
+			shared_facilities, status, views_count, created_at, updated_at,
+			COUNT(*) OVER() AS total_count
 		FROM posts
 		WHERE status = 'active'
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
 	`
 
-	var posts []PostResponse
-	err = db.Select(&posts, query, limitNum, offset)
+	// Temporary struct to hold the total_count from the query
+	type PostResponseWithCount struct {
+		PostResponse
+		TotalCount int `db:"total_count"`
+	}
+
+	var postsWithCount []PostResponseWithCount
+	err := db.Select(&postsWithCount, query, limitNum, offset)
 	if err != nil {
 		fmt.Println("Error fetching posts:", err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to fetch posts")
 		return
 	}
 
-	if posts == nil {
-		posts = []PostResponse{}
+	totalCount := 0
+	if len(postsWithCount) > 0 {
+		totalCount = postsWithCount[0].TotalCount
 	}
 
 	// Convert posts to clean response format
-	cleanPosts := make([]map[string]interface{}, len(posts))
-	for i, post := range posts {
-		cleanPosts[i] = convertPostToResponse(post)
+	cleanPosts := make([]map[string]interface{}, len(postsWithCount))
+	for i, p := range postsWithCount {
+		cleanPosts[i] = convertPostToResponse(p.PostResponse)
+	}
+
+	if cleanPosts == nil {
+		cleanPosts = []map[string]interface{}{}
 	}
 
 	response := map[string]interface{}{
@@ -118,7 +126,7 @@ func (h *Handler) GetPostByID(w http.ResponseWriter, r *http.Request) {
 	util.SendData(w, http.StatusOK, convertPostToResponse(post))
 }
 
-// GetUserPosts returns all posts created by the logged-in user
+// GetUserPosts returns all posts created by the logged-in user - optimized
 func (h *Handler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	db := h.db.(*sqlx.DB)
 
@@ -160,38 +168,46 @@ func (h *Handler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 
 	offset := (pageNum - 1) * limitNum
 
-	// Get total count for user
-	var totalCount int
-	err := db.Get(&totalCount, "SELECT COUNT(*) FROM posts WHERE user_id = $1", userIDInt)
-	if err != nil {
-		fmt.Println("Error counting user posts:", err)
-	}
-
-	// Fetch user's posts
+	// Use window function to get total count in same query
 	query := `
-		SELECT id, user_id, type, post_type, area, description, images, rooms, rent, budget, rent_share, floor, bathrooms, balconies, has_lift, utility_cost, available_from, shared_facilities, status, views_count, created_at, updated_at
+		SELECT 
+			id, user_id, type, post_type, area, description, images, rooms, rent, budget, 
+			rent_share, floor, bathrooms, balconies, has_lift, utility_cost, available_from, 
+			shared_facilities, status, views_count, created_at, updated_at,
+			COUNT(*) OVER() AS total_count
 		FROM posts
 		WHERE user_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
 
-	var posts []PostResponse
-	err = db.Select(&posts, query, userIDInt, limitNum, offset)
+	// Temporary struct to hold the total_count from the query
+	type PostResponseWithCount struct {
+		PostResponse
+		TotalCount int `db:"total_count"`
+	}
+
+	var postsWithCount []PostResponseWithCount
+	err := db.Select(&postsWithCount, query, userIDInt, limitNum, offset)
 	if err != nil {
 		fmt.Println("Error fetching user posts:", err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to fetch posts")
 		return
 	}
 
-	if posts == nil {
-		posts = []PostResponse{}
+	totalCount := 0
+	if len(postsWithCount) > 0 {
+		totalCount = postsWithCount[0].TotalCount
 	}
 
 	// Convert posts to clean response format
-	cleanPosts := make([]map[string]interface{}, len(posts))
-	for i, post := range posts {
-		cleanPosts[i] = convertPostToResponse(post)
+	cleanPosts := make([]map[string]interface{}, len(postsWithCount))
+	for i, p := range postsWithCount {
+		cleanPosts[i] = convertPostToResponse(p.PostResponse)
+	}
+
+	if cleanPosts == nil {
+		cleanPosts = []map[string]interface{}{}
 	}
 
 	response := map[string]interface{}{

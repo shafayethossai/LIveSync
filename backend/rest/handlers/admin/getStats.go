@@ -19,11 +19,12 @@ type DashboardStats struct {
 	TotalFavorites int64 `json:"total_favorites" db:"total_favorites"`
 }
 
-// GetStats returns dashboard statistics
+// GetStats returns dashboard statistics - optimized single query
 func (h *Handler) GetStats(w http.ResponseWriter, r *http.Request) {
 	db := h.db.(*sqlx.DB)
 	var stats DashboardStats
 
+	// Single optimized query combining all counts to avoid multiple COUNT(*) 
 	query := `
 		SELECT
 			(SELECT COUNT(*) FROM users) as total_users,
