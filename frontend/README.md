@@ -1,1 +1,1 @@
-task : in this project i want to use singleton design pattern, repositorry design patter. so in rest/handler admin, user file's many go file use database query in that files. but query only run from repo/ admin, user etc. so move them rest to repo. use normal easy query for run fast.
+
