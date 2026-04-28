@@ -32,10 +32,16 @@ type Config struct {
 var configuration *Config
 
 func loadConfig() {
+	// Attempt to load .env file, but don't fail if it doesn't exist
+	// In production (Render), environment variables are set directly
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Failed to load .env file", err)
-		os.Exit(1)
+		// Only log if it's not a "file not found" error
+		if _, ok := err.(*os.PathError); !ok {
+			fmt.Println("Warning: Error loading .env file:", err)
+		} else {
+			fmt.Println("Info: .env file not found (OK for production, using environment variables)")
+		}
 	}
 
 	// Load general config
