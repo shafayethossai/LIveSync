@@ -1,1 +1,1 @@
-task : in frontend listings.jsx and post details taking many time to load. maximum time it can not load and show error "failed to load listing".
+task : right now my i create another backend project in render and deploy. and it was successfull. then i deploy my frontend into vercel. and try to login but everytime showing invalid pass you can see into photo. in to broswer inspect shows these error. now fix these errors. 
