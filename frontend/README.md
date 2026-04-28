@@ -1,1 +1,1 @@
-task : right now my i create another backend project in render and deploy. and it was successfull. then i deploy my frontend into vercel. and try to login but everytime showing invalid pass you can see into photo. in to broswer inspect shows these error. now fix these errors. 
+task : now in admin portal don't showing real user number, post number all statics real time.
