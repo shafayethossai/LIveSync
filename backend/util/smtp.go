@@ -14,17 +14,36 @@ type SMTPConfig struct {
 }
 
 func NewSMTPConfig() *SMTPConfig {
+	// Try SMTP_PASSWORD first, then fall back to SMTP_PASS for backward compatibility
+	password := os.Getenv("SMTP_PASSWORD")
+	if password == "" {
+		password = os.Getenv("SMTP_PASS")
+	}
+	
 	return &SMTPConfig{
 		Host:     os.Getenv("SMTP_HOST"),
 		Port:     os.Getenv("SMTP_PORT"),
 		User:     os.Getenv("SMTP_USER"),
-		Password: os.Getenv("SMTP_PASS"),
+		Password: password,
 	}
 }
 
 func (s *SMTPConfig) SendOTPEmail(toEmail, otp string) error {
 	if s.Host == "" || s.Port == "" || s.User == "" || s.Password == "" {
-		return fmt.Errorf("SMTP configuration not fully set")
+		missingFields := []string{}
+		if s.Host == "" {
+			missingFields = append(missingFields, "SMTP_HOST")
+		}
+		if s.Port == "" {
+			missingFields = append(missingFields, "SMTP_PORT")
+		}
+		if s.User == "" {
+			missingFields = append(missingFields, "SMTP_USER")
+		}
+		if s.Password == "" {
+			missingFields = append(missingFields, "SMTP_PASS")
+		}
+		return fmt.Errorf("SMTP configuration incomplete - missing: %v. Please configure environment variables", missingFields)
 	}
 
 	from := s.User
@@ -88,7 +107,20 @@ func (s *SMTPConfig) SendOTPEmail(toEmail, otp string) error {
 
 func (s *SMTPConfig) SendWelcomeEmail(toEmail, userName string) error {
 	if s.Host == "" || s.Port == "" || s.User == "" || s.Password == "" {
-		return fmt.Errorf("SMTP configuration not fully set")
+		missingFields := []string{}
+		if s.Host == "" {
+			missingFields = append(missingFields, "SMTP_HOST")
+		}
+		if s.Port == "" {
+			missingFields = append(missingFields, "SMTP_PORT")
+		}
+		if s.User == "" {
+			missingFields = append(missingFields, "SMTP_USER")
+		}
+		if s.Password == "" {
+			missingFields = append(missingFields, "SMTP_PASS")
+		}
+		return fmt.Errorf("SMTP configuration incomplete - missing: %v. Please configure environment variables", missingFields)
 	}
 
 	from := s.User
@@ -142,7 +174,20 @@ func (s *SMTPConfig) SendWelcomeEmail(toEmail, userName string) error {
 // SendPasswordResetEmail sends a password reset OTP email
 func (s *SMTPConfig) SendPasswordResetEmail(toEmail, otp string) error {
 	if s.Host == "" || s.Port == "" || s.User == "" || s.Password == "" {
-		return fmt.Errorf("SMTP configuration not fully set")
+		missingFields := []string{}
+		if s.Host == "" {
+			missingFields = append(missingFields, "SMTP_HOST")
+		}
+		if s.Port == "" {
+			missingFields = append(missingFields, "SMTP_PORT")
+		}
+		if s.User == "" {
+			missingFields = append(missingFields, "SMTP_USER")
+		}
+		if s.Password == "" {
+			missingFields = append(missingFields, "SMTP_PASS")
+		}
+		return fmt.Errorf("SMTP configuration incomplete - missing: %v. Please configure environment variables", missingFields)
 	}
 
 	from := s.User
