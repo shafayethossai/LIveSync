@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -32,8 +33,8 @@ type Post struct {
 	SharedFacilities sql.NullString `json:"shared_facilities" db:"shared_facilities"`
 	Status           string         `json:"status" db:"status"`
 	ViewsCount       int            `json:"views_count" db:"views_count"`
-	CreatedAt        string         `json:"created_at" db:"created_at"`
-	UpdatedAt        string         `json:"updated_at" db:"updated_at"`
+	CreatedAt        time.Time      `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at" db:"updated_at"`
 }
 
 type AdminPost struct {
@@ -99,7 +100,7 @@ func (r *postRepo) Create(ctx context.Context, post Post) (*Post, error) {
 			floor, bathrooms, balconies, has_lift, utility_cost, available_from, shared_facilities, status
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-			$11, $12, $13, $14, $15, $16, 'active'
+			$11, $12, $13, $14, $15, $16, $17, 'active'
 		)
 		RETURNING id, user_id, type, post_type, area, description, images, rooms, rent, budget, rent_share,
 			floor, bathrooms, balconies, has_lift, utility_cost, available_from, shared_facilities, status, views_count, created_at, updated_at

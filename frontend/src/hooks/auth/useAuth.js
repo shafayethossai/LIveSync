@@ -6,12 +6,12 @@ export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     // logout function to clear user data and token
     localStorage.removeItem("token");
     localStorage.removeItem("livesync_user");
     setUser(null);
-  };
+  }, []);
 
   const fetchCurrentUser = useCallback(async () => {
     // getting current user info using token
