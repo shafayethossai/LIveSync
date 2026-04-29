@@ -2,10 +2,8 @@ package util
 
 import (
 	"fmt"
-	"net"
 	"net/smtp"
 	"os"
-	"time"
 )
 
 type SMTPConfig struct {
@@ -78,48 +76,13 @@ func (s *SMTPConfig) SendOTPEmail(toEmail, otp string) error {
 		toEmail, subject, htmlBody,
 	)
 
-	// Send email with timeout
+	// Send email
 	addr := s.Host + ":" + s.Port
-	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	err := smtp.SendMail(addr, auth, from, []string{toEmail}, []byte(message))
 	if err != nil {
-		return fmt.Errorf("failed to connect to SMTP server: %v", err)
-	}
-	defer conn.Close()
-
-	client, err := smtp.NewClient(conn, s.Host)
-	if err != nil {
-		return fmt.Errorf("failed to create SMTP client: %v", err)
-	}
-	defer client.Close()
-
-	if err = client.Auth(auth); err != nil {
-		return fmt.Errorf("failed to authenticate: %v", err)
+		return fmt.Errorf("failed to send email: %v", err)
 	}
 
-	if err = client.Mail(from); err != nil {
-		return fmt.Errorf("failed to set mail from: %v", err)
-	}
-
-	if err = client.Rcpt(toEmail); err != nil {
-		return fmt.Errorf("failed to set recipient: %v", err)
-	}
-
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("failed to get writer: %v", err)
-	}
-
-	_, err = fmt.Fprintf(w, message)
-	if err != nil {
-		return fmt.Errorf("failed to write message: %v", err)
-	}
-
-	err = w.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close writer: %v", err)
-	}
-
-	client.Quit()
 	return nil
 }
 
@@ -168,46 +131,11 @@ func (s *SMTPConfig) SendWelcomeEmail(toEmail, userName string) error {
 	)
 
 	addr := s.Host + ":" + s.Port
-	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	err := smtp.SendMail(addr, auth, from, []string{toEmail}, []byte(message))
 	if err != nil {
-		return fmt.Errorf("failed to connect to SMTP server: %v", err)
-	}
-	defer conn.Close()
-
-	client, err := smtp.NewClient(conn, s.Host)
-	if err != nil {
-		return fmt.Errorf("failed to create SMTP client: %v", err)
-	}
-	defer client.Close()
-
-	if err = client.Auth(auth); err != nil {
-		return fmt.Errorf("failed to authenticate: %v", err)
+		return fmt.Errorf("failed to send welcome email: %v", err)
 	}
 
-	if err = client.Mail(from); err != nil {
-		return fmt.Errorf("failed to set mail from: %v", err)
-	}
-
-	if err = client.Rcpt(toEmail); err != nil {
-		return fmt.Errorf("failed to set recipient: %v", err)
-	}
-
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("failed to get writer: %v", err)
-	}
-
-	_, err = fmt.Fprintf(w, message)
-	if err != nil {
-		return fmt.Errorf("failed to write message: %v", err)
-	}
-
-	err = w.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close writer: %v", err)
-	}
-
-	client.Quit()
 	return nil
 }
 
@@ -264,46 +192,11 @@ func (s *SMTPConfig) SendPasswordResetEmail(toEmail, otp string) error {
 	)
 
 	addr := s.Host + ":" + s.Port
-	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	err := smtp.SendMail(addr, auth, from, []string{toEmail}, []byte(message))
 	if err != nil {
-		return fmt.Errorf("failed to connect to SMTP server: %v", err)
-	}
-	defer conn.Close()
-
-	client, err := smtp.NewClient(conn, s.Host)
-	if err != nil {
-		return fmt.Errorf("failed to create SMTP client: %v", err)
-	}
-	defer client.Close()
-
-	if err = client.Auth(auth); err != nil {
-		return fmt.Errorf("failed to authenticate: %v", err)
+		return fmt.Errorf("failed to send password reset email: %v", err)
 	}
 
-	if err = client.Mail(from); err != nil {
-		return fmt.Errorf("failed to set mail from: %v", err)
-	}
-
-	if err = client.Rcpt(toEmail); err != nil {
-		return fmt.Errorf("failed to set recipient: %v", err)
-	}
-
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("failed to get writer: %v", err)
-	}
-
-	_, err = fmt.Fprintf(w, message)
-	if err != nil {
-		return fmt.Errorf("failed to write message: %v", err)
-	}
-
-	err = w.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close writer: %v", err)
-	}
-
-	client.Quit()
 	return nil
 }
 

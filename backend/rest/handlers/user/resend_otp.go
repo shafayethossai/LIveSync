@@ -58,11 +58,18 @@ func (h *Handler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 
 	// Send new OTP via email asynchronously
 	smtpConfig := util.NewSMTPConfig()
+	fmt.Println("=== Resending OTP ===")
+	fmt.Printf("To: %s\n", req.Email)
+	fmt.Printf("New OTP Code: %s\n", newOTP)
+	fmt.Printf("SMTP Host: %s\n", smtpConfig.Host)
+	fmt.Printf("SMTP Port: %s\n", smtpConfig.Port)
+	
 	go func() {
 		err := smtpConfig.SendOTPEmail(req.Email, newOTP)
 		if err != nil {
-			fmt.Println("Error sending OTP email:", err)
-			// Log error but don't fail the request since data is already updated
+			fmt.Printf("❌ Error sending OTP email: %v\n", err)
+		} else {
+			fmt.Println("✅ OTP email sent successfully")
 		}
 	}()
 

@@ -100,11 +100,18 @@ func (h *Handler) RequestOTP(w http.ResponseWriter, r *http.Request) {
 
 	// Send OTP via email asynchronously
 	smtpConfig := util.NewSMTPConfig()
+	fmt.Println("=== Sending OTP ===")
+	fmt.Printf("To: %s\n", req.Email)
+	fmt.Printf("OTP Code: %s\n", otp)
+	fmt.Printf("SMTP Host: %s\n", smtpConfig.Host)
+	fmt.Printf("SMTP Port: %s\n", smtpConfig.Port)
+	
 	go func() {
 		err := smtpConfig.SendOTPEmail(req.Email, otp)
 		if err != nil {
-			fmt.Println("Error sending OTP email:", err)
-			// Log error but don't fail the request since data is already saved
+			fmt.Printf("❌ Error sending OTP email: %v\n", err)
+		} else {
+			fmt.Println("✅ OTP email sent successfully")
 		}
 	}()
 
