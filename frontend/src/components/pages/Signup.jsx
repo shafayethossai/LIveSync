@@ -160,6 +160,7 @@ export default function Signup() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
+                        disabled={loading}
                         className="pl-12 bg-white/10 border-white/20 text-white h-14 rounded-2xl"
                       />
                     </div>
@@ -177,6 +178,7 @@ export default function Signup() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        disabled={loading}
                         className="pl-12 bg-white/10 border-white/20 text-white h-14 rounded-2xl"
                       />
                     </div>
@@ -193,6 +195,7 @@ export default function Signup() {
                         placeholder="+880 1XXXXXXXXX"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
+                        disabled={loading}
                         className="pl-12 bg-white/10 border-white/20 text-white h-14 rounded-2xl"
                       />
                     </div>
@@ -210,6 +213,7 @@ export default function Signup() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        disabled={loading}
                         className="pl-12 bg-white/10 border-white/20 text-white h-14 rounded-2xl"
                       />
                     </div>

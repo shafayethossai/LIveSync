@@ -56,14 +56,15 @@ func (h *Handler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send new OTP via email
+	// Send new OTP via email asynchronously
 	smtpConfig := util.NewSMTPConfig()
-	err = smtpConfig.SendOTPEmail(req.Email, newOTP)
-	if err != nil {
-		fmt.Println("Error sending OTP email:", err)
-		util.SendError(w, http.StatusInternalServerError, "Failed to send OTP email")
-		return
-	}
+	go func() {
+		err := smtpConfig.SendOTPEmail(req.Email, newOTP)
+		if err != nil {
+			fmt.Println("Error sending OTP email:", err)
+			// Log error but don't fail the request since data is already updated
+		}
+	}()
 
 	response := OTPResponse{
 		Message: "New OTP sent successfully to your email. Please verify within 10 minutes.",

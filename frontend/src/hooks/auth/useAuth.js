@@ -114,8 +114,19 @@ export const useAuth = () => {
         email: response.data.email,
       };
     } catch (error) {
-      const message =
-        error.response?.data?.error || error.message || "Failed to send OTP";
+      let message = "Failed to send OTP";
+
+      if (error.code === "ECONNABORTED") {
+        message =
+          "Request timeout. Please check your internet connection and try again.";
+      } else if (error.response?.data?.error) {
+        message = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.message) {
+        message = error.message;
+      }
+
       return { success: false, message };
     }
   };
@@ -144,10 +155,18 @@ export const useAuth = () => {
         user: userData,
       };
     } catch (error) {
-      const message =
-        error.response?.data?.error ||
-        error.message ||
-        "OTP verification failed";
+      let message = "OTP verification failed";
+
+      if (error.code === "ECONNABORTED") {
+        message = "Request timeout. Please try again.";
+      } else if (error.response?.data?.error) {
+        message = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.message) {
+        message = error.message;
+      }
+
       return { success: false, message };
     }
   };
@@ -163,8 +182,19 @@ export const useAuth = () => {
         email: response.data.email,
       };
     } catch (error) {
-      const message =
-        error.response?.data?.error || error.message || "Failed to resend OTP";
+      let message = "Failed to resend OTP";
+
+      if (error.code === "ECONNABORTED") {
+        message =
+          "Request timeout. Please check your internet connection and try again.";
+      } else if (error.response?.data?.error) {
+        message = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.message) {
+        message = error.message;
+      }
+
       return { success: false, message };
     }
   };

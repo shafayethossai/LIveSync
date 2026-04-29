@@ -7,7 +7,7 @@ const baseURL = apiBase.endsWith("/api") ? apiBase : `${apiBase}/api`;
 
 const api = axios.create({
   baseURL,
-  timeout: 30000,
+  timeout: 60000, // Increased to 60 seconds for OTP email sending
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
