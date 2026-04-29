@@ -1,9 +1,12 @@
 package util
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"os"
+	"time"
 )
 
 type SMTPConfig struct {
@@ -11,6 +14,7 @@ type SMTPConfig struct {
 	Port     string
 	User     string
 	Password string
+	From     string
 }
 
 func NewSMTPConfig() *SMTPConfig {
@@ -25,7 +29,73 @@ func NewSMTPConfig() *SMTPConfig {
 		Port:     os.Getenv("SMTP_PORT"),
 		User:     os.Getenv("SMTP_USER"),
 		Password: password,
+		From:     os.Getenv("SMTP_FROM"),
 	}
+}
+
+func (s *SMTPConfig) senderEmail() string {
+	if s.From != "" {
+		return s.From
+	}
+	return s.User
+}
+
+func sendMailWithTimeout(addr, host, user, password, from string, recipients []string, message []byte, timeout time.Duration) error {
+	conn, err := net.DialTimeout("tcp", addr, timeout)
+	if err != nil {
+		return fmt.Errorf("failed to connect to SMTP server: %v", err)
+	}
+	defer conn.Close()
+
+	if err := conn.SetDeadline(time.Now().Add(timeout)); err != nil {
+		return fmt.Errorf("failed to set SMTP deadline: %v", err)
+	}
+
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return fmt.Errorf("failed to create SMTP client: %v", err)
+	}
+	defer client.Close()
+
+	if ok, _ := client.Extension("STARTTLS"); ok {
+		tlsConfig := &tls.Config{ServerName: host}
+		if err := client.StartTLS(tlsConfig); err != nil {
+			return fmt.Errorf("failed to start TLS: %v", err)
+		}
+	}
+
+	if user != "" && password != "" {
+		auth := smtp.PlainAuth("", user, password, host)
+		if err := client.Auth(auth); err != nil {
+			return fmt.Errorf("failed to authenticate SMTP user: %v", err)
+		}
+	}
+
+	if err := client.Mail(from); err != nil {
+		return fmt.Errorf("failed to set sender: %v", err)
+	}
+
+	for _, recipient := range recipients {
+		if err := client.Rcpt(recipient); err != nil {
+			return fmt.Errorf("failed to set recipient %s: %v", recipient, err)
+		}
+	}
+
+	writer, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("failed to open SMTP data writer: %v", err)
+	}
+
+	if _, err := writer.Write(message); err != nil {
+		_ = writer.Close()
+		return fmt.Errorf("failed to write email body: %v", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("failed to finalize email: %v", err)
+	}
+
+	return nil
 }
 
 func (s *SMTPConfig) SendOTPEmail(toEmail, otp string) error {
@@ -46,7 +116,7 @@ func (s *SMTPConfig) SendOTPEmail(toEmail, otp string) error {
 		return fmt.Errorf("SMTP configuration incomplete - missing: %v. Please configure environment variables", missingFields)
 	}
 
-	from := s.User
+	from := s.senderEmail()
 	subject := "Your LiveSync OTP Verification Code"
 
 	htmlBody := fmt.Sprintf(`
@@ -86,23 +156,13 @@ func (s *SMTPConfig) SendOTPEmail(toEmail, otp string) error {
 </html>
 	`, otp)
 
-	// Set up authentication
-	auth := smtp.PlainAuth("", s.User, s.Password, s.Host)
-
 	// Create message with headers
 	message := fmt.Sprintf(
 		"To: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=\"UTF-8\"\r\n\r\n%s",
 		toEmail, subject, htmlBody,
 	)
 
-	// Send email
-	addr := s.Host + ":" + s.Port
-	err := smtp.SendMail(addr, auth, from, []string{toEmail}, []byte(message))
-	if err != nil {
-		return fmt.Errorf("failed to send email: %v", err)
-	}
-
-	return nil
+	return sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
 }
 
 func (s *SMTPConfig) SendWelcomeEmail(toEmail, userName string) error {
@@ -123,7 +183,7 @@ func (s *SMTPConfig) SendWelcomeEmail(toEmail, userName string) error {
 		return fmt.Errorf("SMTP configuration incomplete - missing: %v. Please configure environment variables", missingFields)
 	}
 
-	from := s.User
+	from := s.senderEmail()
 	subject := "Welcome to LiveSync!"
 
 	htmlBody := fmt.Sprintf(`
@@ -156,19 +216,12 @@ func (s *SMTPConfig) SendWelcomeEmail(toEmail, userName string) error {
 </html>
 	`, userName)
 
-	auth := smtp.PlainAuth("", s.User, s.Password, s.Host)
 	message := fmt.Sprintf(
 		"To: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=\"UTF-8\"\r\n\r\n%s",
 		toEmail, subject, htmlBody,
 	)
 
-	addr := s.Host + ":" + s.Port
-	err := smtp.SendMail(addr, auth, from, []string{toEmail}, []byte(message))
-	if err != nil {
-		return fmt.Errorf("failed to send welcome email: %v", err)
-	}
-
-	return nil
+	return sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
 }
 
 // SendPasswordResetEmail sends a password reset OTP email
@@ -190,7 +243,7 @@ func (s *SMTPConfig) SendPasswordResetEmail(toEmail, otp string) error {
 		return fmt.Errorf("SMTP configuration incomplete - missing: %v. Please configure environment variables", missingFields)
 	}
 
-	from := s.User
+	from := s.senderEmail()
 	subject := "LiveSync Password Reset Code"
 
 	htmlBody := fmt.Sprintf(`
@@ -230,19 +283,12 @@ func (s *SMTPConfig) SendPasswordResetEmail(toEmail, otp string) error {
 </html>
 	`, otp)
 
-	auth := smtp.PlainAuth("", s.User, s.Password, s.Host)
 	message := fmt.Sprintf(
 		"To: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=\"UTF-8\"\r\n\r\n%s",
 		toEmail, subject, htmlBody,
 	)
 
-	addr := s.Host + ":" + s.Port
-	err := smtp.SendMail(addr, auth, from, []string{toEmail}, []byte(message))
-	if err != nil {
-		return fmt.Errorf("failed to send password reset email: %v", err)
-	}
-
-	return nil
+	return sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
 }
 
 // SendPasswordChangedEmail sends a confirmation email after password change
@@ -251,7 +297,7 @@ func (s *SMTPConfig) SendPasswordChangedEmail(toEmail string) error {
 		return fmt.Errorf("SMTP configuration not fully set")
 	}
 
-	from := s.User
+	from := s.senderEmail()
 	subject := "LiveSync Password Changed Successfully"
 
 	htmlBody := `
@@ -286,17 +332,10 @@ func (s *SMTPConfig) SendPasswordChangedEmail(toEmail string) error {
 </html>
 	`
 
-	auth := smtp.PlainAuth("", s.User, s.Password, s.Host)
 	message := fmt.Sprintf(
 		"To: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=\"UTF-8\"\r\n\r\n%s",
 		toEmail, subject, htmlBody,
 	)
 
-	addr := s.Host + ":" + s.Port
-	err := smtp.SendMail(addr, auth, from, []string{toEmail}, []byte(message))
-	if err != nil {
-		return fmt.Errorf("failed to send password changed email: %v", err)
-	}
-
-	return nil
+	return sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
 }
