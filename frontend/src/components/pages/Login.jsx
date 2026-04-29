@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from "../context/AuthContext";
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { Logo } from '../ui/Logo';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -63,8 +63,7 @@ export default function Login() {
           Google login is not configured. Set <code className="rounded bg-white/10 px-1 py-0.5">VITE_GOOGLE_CLIENT_ID</code> for production.
         </div>
       )}
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
           <motion.div
             className="absolute -top-40 -right-40 w-96 h-96 bg-white/10 rounded-full blur-3xl"
@@ -177,7 +176,6 @@ export default function Login() {
           </motion.div>
         </div>
       </div>
-    </GoogleOAuthProvider>
     </>
   );
 }

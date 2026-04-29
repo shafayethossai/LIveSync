@@ -7,13 +7,19 @@ import { AdminAuthProvider } from './components/context/AdminAuthContext';
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 export default function App() {
-  return (
+  const appContent = (
+    <AuthProvider>
+      <AdminAuthProvider>
+        <RouterProvider router={router} />
+      </AdminAuthProvider>
+    </AuthProvider>
+  );
+
+  return googleClientId ? (
     <GoogleOAuthProvider clientId={googleClientId}>
-      <AuthProvider>
-        <AdminAuthProvider>
-          <RouterProvider router={router} />
-        </AdminAuthProvider>
-      </AuthProvider>
+      {appContent}
     </GoogleOAuthProvider>
+  ) : (
+    appContent
   );
 }
