@@ -4,11 +4,9 @@ import "net/http"
 
 func Preflight(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		
 		if r.Method == "OPTIONS" {
-			w.Header().Set("Content-Length", "0")
-			w.WriteHeader(http.StatusOK)
-			return
+			w.WriteHeader(200)
+			return 
 		}
 
 		next.ServeHTTP(w, r)

@@ -38,6 +38,7 @@ func NewServer(cnf *config.Config, userHandler *user.Handler, adminHandler *admi
 func (server *Server) Start() {
 	manager := middlewares.NewManager()
 	manager.Use(
+		middlewares.Preflight,
 		middlewares.Cors,
 		middlewares.Logger,
 	)
