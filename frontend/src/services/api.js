@@ -1,10 +1,16 @@
 import axios from "axios";
 
+const rawApiUrl =
+  import.meta.env.VITE_API_URL?.trim() || "https://livesync-071q.onrender.com";
+const apiBase = rawApiUrl.replace(/\/+$/, "");
+const baseURL = apiBase.endsWith("/api") ? apiBase : `${apiBase}/api`;
+
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || "https://livesync-07lq.onrender.com"}/api`, // This is where your Go backend will run
+  baseURL,
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
+    Accept: "application/json",
   },
   withCredentials: false,
 });

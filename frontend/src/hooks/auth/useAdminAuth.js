@@ -6,35 +6,43 @@ export const useAdminAuth = () => {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchCurrentAdmin = useCallback(async () => {
-    try {
-      const response = await api.get("/admins/me");
-      setAdmin(response.data);
-    } catch {
-      console.error("Admin token invalid or expired");
-      logoutAdmin();
-    } finally {
-      setLoading(false);
-    }
+  const logoutAdmin = useCallback(() => {
+    sessionStorage.removeItem("admin_token");
+    sessionStorage.removeItem("livesync_admin");
+    setAdmin(null);
   }, []);
+
+  const fetchCurrentAdmin = useCallback(async () => {
+    const savedAdmin = sessionStorage.getItem("livesync_admin");
+    if (savedAdmin) {
+      try {
+        setAdmin(JSON.parse(savedAdmin));
+      } catch (error) {
+        console.error("Failed to parse saved admin data", error);
+        logoutAdmin();
+      }
+    }
+    setLoading(false);
+  }, [logoutAdmin]);
 
   // Load admin on app start if token exists
   useEffect(() => {
-    const token = localStorage.getItem("admin_token");
-    if (token) {
-      fetchCurrentAdmin();
-    } else {
+    const token = sessionStorage.getItem("admin_token");
+    if (!token) {
       setLoading(false);
+      return;
     }
+
+    fetchCurrentAdmin();
   }, [fetchCurrentAdmin]);
 
   const loginAdmin = async (email, password) => {
     try {
-      const response = await api.post("/admins/login", { email, password });
+      const response = await api.post("/admin/login", { email, password });
       const { token, admin: adminData } = response.data;
 
-      localStorage.setItem("admin_token", token);
-      localStorage.setItem("livesync_admin", JSON.stringify(adminData));
+      sessionStorage.setItem("admin_token", token);
+      sessionStorage.setItem("livesync_admin", JSON.stringify(adminData));
       setAdmin(adminData);
 
       return { success: true, admin: adminData };
@@ -47,26 +55,12 @@ export const useAdminAuth = () => {
     }
   };
 
-  const signupAdmin = async (name, email, password, phone = "") => {
-    try {
-      await api.post("/admins", { name, email, password, phone });
-      return {
-        success: true,
-        message: "Admin account created successfully! Please login.",
-      };
-    } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Signup failed";
-      return { success: false, message };
-    }
-  };
-
-  const logoutAdmin = () => {
-    localStorage.removeItem("admin_token");
-    localStorage.removeItem("livesync_admin");
-    setAdmin(null);
+  const signupAdmin = async () => {
+    return {
+      success: false,
+      message:
+        "Admin signup is not available. Please use the existing admin account.",
+    };
   };
 
   return {
