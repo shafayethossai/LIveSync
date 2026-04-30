@@ -44,7 +44,6 @@ func loadConfig() {
 		}
 	}
 
-	// Load general config
 	version := os.Getenv("VERSION")
 	if version == "" {
 		fmt.Println("Version is Required")

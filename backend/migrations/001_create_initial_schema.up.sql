@@ -2,7 +2,7 @@
 
 -- 1. Users Table
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- 2. Posts Table
 CREATE TABLE IF NOT EXISTS posts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     type VARCHAR(20) NOT NULL CHECK (type IN ('family', 'bachelor')),
     post_type VARCHAR(20) NOT NULL CHECK (post_type IN ('offer', 'requirement')),
@@ -50,10 +50,10 @@ CREATE TABLE IF NOT EXISTS posts (
 
 -- 3. Messages Table
 CREATE TABLE IF NOT EXISTS messages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    receiver_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    post_id UUID REFERENCES posts(id) ON DELETE SET NULL,
+    id SERIAL PRIMARY KEY,
+    sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
     content TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS messages (
 
 -- 5. Admin Users Table
 CREATE TABLE IF NOT EXISTS admin_users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
