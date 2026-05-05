@@ -1,9 +1,15 @@
 import axios from "axios";
 
+// Use environment variable for flexibility across deployments
 const rawApiUrl =
   import.meta.env.VITE_API_URL?.trim() || "https://livesync-07lq.onrender.com";
 const apiBase = rawApiUrl.replace(/\/+$/, "");
 const baseURL = apiBase.endsWith("/api") ? apiBase : `${apiBase}/api`;
+
+// Debug log
+if (import.meta.env.DEV) {
+  console.log('API BaseURL:', baseURL);
+}
 
 const api = axios.create({
   baseURL,
