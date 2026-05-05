@@ -185,22 +185,33 @@ func (h *Handler) GoogleSignIn(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&req)
 	if err != nil {
+		fmt.Println("[Google SignIn] Error decoding request body:", err)
 		util.SendError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.IDToken == "" {
+		fmt.Println("[Google SignIn] Missing ID token in request")
+		util.SendError(w, http.StatusBadRequest, "ID token is required")
 		return
 	}
 
 	// Extract user email from ID token (using crude parsing, improve in production)
 	// In production, use golang.org/x/oauth2/google to properly verify the token
+	fmt.Println("[Google SignIn] Attempting to extract token info...")
 	userInfo, err := extractGoogleTokenInfo(req.IDToken)
 	if err != nil {
-		fmt.Println("Error extracting token info:", err)
+		fmt.Printf("[Google SignIn] Error extracting token info: %v\n", err)
 		util.SendError(w, http.StatusUnauthorized, "Invalid token")
 		return
 	}
 
+	fmt.Printf("[Google SignIn] Successfully extracted user info. Email: %s, Name: %s\n", userInfo.Email, userInfo.Name)
+
 	// Check if user exists, if not create one
 	user, err := h.userRepo.FindByEmail(userInfo.Email, "")
 	if err != nil || user == nil {
+		fmt.Printf("[Google SignIn] User not found, creating new user: %s\n", userInfo.Email)
 		// Create new user with Google info
 		newUser := repo.User{
 			Name:         userInfo.Name,
@@ -213,10 +224,13 @@ func (h *Handler) GoogleSignIn(w http.ResponseWriter, r *http.Request) {
 
 		user, err = h.userRepo.Create(newUser)
 		if err != nil {
-			fmt.Println("Error creating user:", err)
+			fmt.Printf("[Google SignIn] Error creating user: %v\n", err)
 			util.SendError(w, http.StatusInternalServerError, "Failed to create user")
 			return
 		}
+		fmt.Printf("[Google SignIn] User created successfully with ID: %d\n", user.ID)
+	} else {
+		fmt.Printf("[Google SignIn] Existing user found with ID: %d\n", user.ID)
 	}
 
 	// Generate JWT token
@@ -227,6 +241,7 @@ func (h *Handler) GoogleSignIn(w http.ResponseWriter, r *http.Request) {
 		Role:  user.Role,
 	})
 	if err != nil {
+		fmt.Printf("[Google SignIn] Error generating JWT: %v\n", err)
 		util.SendError(w, http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
@@ -244,6 +259,7 @@ func (h *Handler) GoogleSignIn(w http.ResponseWriter, r *http.Request) {
 			"created_at": user.CreatedAt,
 		},
 	}
+	fmt.Printf("[Google SignIn] Successfully authenticated user: %s\n", user.Email)
 	util.SendData(w, http.StatusOK, response)
 }
 

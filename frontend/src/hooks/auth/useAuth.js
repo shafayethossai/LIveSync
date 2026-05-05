@@ -101,12 +101,17 @@ export const useAuth = () => {
   const requestOTP = async (name, email, password, phone = "") => {
     // OTP signup: Step 1 - Request OTP
     try {
+      console.log('[OTP Request] Starting OTP request for:', email);
+      console.log('[OTP Request] API URL:', api.defaults.baseURL);
+      
       const response = await api.post("/auth/signup/request-otp", {
         name,
         email,
         password,
         phone,
       });
+      
+      console.log('[OTP Request] Success! Response:', response.data);
 
       return {
         success: true,
@@ -114,6 +119,14 @@ export const useAuth = () => {
         email: response.data.email,
       };
     } catch (error) {
+      console.error('[OTP Request] Failed with error:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        code: error.code,
+      });
+      
       let message = "Failed to send OTP";
 
       if (error.code === "ECONNABORTED") {
@@ -241,25 +254,41 @@ export const useAuth = () => {
   const googleLogin = async (idToken) => {
     // Google OAuth login function
     try {
+      console.log('[Google Login] Starting Google OAuth signin...');
+      console.log('[Google Login] API URL:', api.defaults.baseURL);
+      
       const response = await api.post("/auth/google/signin", {
         id_token: idToken,
       });
+      
+      console.log('[Google Login] Success response:', response.data);
       const { token, user: userData } = response.data;
 
       // Validate response has required fields
       if (!userData.id || !userData.email || !token) {
+        console.error('[Google Login] Missing required fields in response');
         throw new Error("Invalid login response from server");
       }
 
       localStorage.setItem("token", token);
       localStorage.setItem("livesync_user", JSON.stringify(userData));
       setUser(userData);
+      console.log('[Google Login] User set successfully:', userData.email);
 
       return { success: true, user: userData };
     } catch (error) {
+      console.error('[Google Login] Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        code: error.code,
+      });
+      
       const message =
         error.response?.data?.message ||
         error.response?.data?.error ||
+        error.message ||
         "Google login failed";
       return { success: false, message };
     }

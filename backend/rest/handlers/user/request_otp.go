@@ -100,17 +100,20 @@ func (h *Handler) RequestOTP(w http.ResponseWriter, r *http.Request) {
 
 	// Send OTP in the background so the API can respond immediately.
 	smtpConfig := util.NewSMTPConfig()
-	fmt.Println("=== Sending OTP ===")
-	fmt.Printf("To: %s\n", req.Email)
-	fmt.Printf("OTP Code: %s\n", otp)
-	fmt.Printf("SMTP Host: %s\n", smtpConfig.Host)
-	fmt.Printf("SMTP Port: %s\n", smtpConfig.Port)
+	fmt.Println("=== [RequestOTP] Sending OTP ===")
+	fmt.Printf("[RequestOTP] To: %s\n", req.Email)
+	fmt.Printf("[RequestOTP] OTP Code: %s\n", otp)
+	fmt.Printf("[RequestOTP] SMTP Host: %s\n", smtpConfig.Host)
+	fmt.Printf("[RequestOTP] SMTP Port: %s\n", smtpConfig.Port)
+	fmt.Printf("[RequestOTP] SMTP User: %s\n", smtpConfig.User)
+	fmt.Printf("[RequestOTP] SMTP From: %s\n", smtpConfig.From)
+
 	go func(email, code string, cfg *util.SMTPConfig) {
 		if err := cfg.SendOTPEmail(email, code); err != nil {
-			fmt.Printf("❌ Error sending OTP email to %s: %v\n", email, err)
+			fmt.Printf("❌ [RequestOTP] Error sending OTP email to %s: %v\n", email, err)
 			return
 		}
-		fmt.Printf("✅ OTP email sent successfully to %s\n", email)
+		fmt.Printf("✅ [RequestOTP] OTP email sent successfully to %s\n", email)
 	}(req.Email, otp, smtpConfig)
 
 	response := OTPResponse{
