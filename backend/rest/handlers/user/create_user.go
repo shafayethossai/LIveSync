@@ -48,6 +48,10 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		fmt.Println(err)
+		if err == repo.ErrUserExists {
+			util.SendError(w, http.StatusConflict, "Email already registered")
+			return
+		}
 		util.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}

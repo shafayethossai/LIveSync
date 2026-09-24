@@ -9,6 +9,23 @@ import (
 	"time"
 )
 
+// logSMTPError logs SMTP errors to a file for debugging async email failures
+func logSMTPError(context string, err error) {
+	if err == nil {
+		return
+	}
+	logFile, errFile := os.OpenFile("smtp_errors.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if errFile != nil {
+		fmt.Printf("❌ Failed to open error log: %v\n", errFile)
+		return
+	}
+	defer logFile.Close()
+
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	logMessage := fmt.Sprintf("[%s] %s - Error: %v\n", timestamp, context, err)
+	logFile.WriteString(logMessage)
+}
+
 type SMTPConfig struct {
 	Host     string
 	Port     string
@@ -23,7 +40,7 @@ func NewSMTPConfig() *SMTPConfig {
 	if password == "" {
 		password = os.Getenv("SMTP_PASS")
 	}
-	
+
 	return &SMTPConfig{
 		Host:     os.Getenv("SMTP_HOST"),
 		Port:     os.Getenv("SMTP_PORT"),
@@ -111,7 +128,7 @@ func (s *SMTPConfig) SendOTPEmail(toEmail, otp string) error {
 			missingFields = append(missingFields, "SMTP_USER")
 		}
 		if s.Password == "" {
-			missingFields = append(missingFields, "SMTP_PASS")
+			missingFields = append(missingFields, "SMTP_PASSWORD")
 		}
 		return fmt.Errorf("SMTP configuration incomplete - missing: %v. Please configure environment variables", missingFields)
 	}
@@ -162,7 +179,11 @@ func (s *SMTPConfig) SendOTPEmail(toEmail, otp string) error {
 		toEmail, subject, htmlBody,
 	)
 
-	return sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
+	err := sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
+	if err != nil {
+		logSMTPError(fmt.Sprintf("SendOTPEmail to %s", toEmail), err)
+	}
+	return err
 }
 
 func (s *SMTPConfig) SendWelcomeEmail(toEmail, userName string) error {
@@ -178,7 +199,7 @@ func (s *SMTPConfig) SendWelcomeEmail(toEmail, userName string) error {
 			missingFields = append(missingFields, "SMTP_USER")
 		}
 		if s.Password == "" {
-			missingFields = append(missingFields, "SMTP_PASS")
+			missingFields = append(missingFields, "SMTP_PASSWORD")
 		}
 		return fmt.Errorf("SMTP configuration incomplete - missing: %v. Please configure environment variables", missingFields)
 	}
@@ -221,10 +242,12 @@ func (s *SMTPConfig) SendWelcomeEmail(toEmail, userName string) error {
 		toEmail, subject, htmlBody,
 	)
 
-	return sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
+	err := sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
+	if err != nil {
+		logSMTPError(fmt.Sprintf("SendWelcomeEmail to %s", toEmail), err)
+	}
+	return err
 }
-
-// SendPasswordResetEmail sends a password reset OTP email
 func (s *SMTPConfig) SendPasswordResetEmail(toEmail, otp string) error {
 	if s.Host == "" || s.Port == "" || s.User == "" || s.Password == "" {
 		missingFields := []string{}
@@ -238,7 +261,7 @@ func (s *SMTPConfig) SendPasswordResetEmail(toEmail, otp string) error {
 			missingFields = append(missingFields, "SMTP_USER")
 		}
 		if s.Password == "" {
-			missingFields = append(missingFields, "SMTP_PASS")
+			missingFields = append(missingFields, "SMTP_PASSWORD")
 		}
 		return fmt.Errorf("SMTP configuration incomplete - missing: %v. Please configure environment variables", missingFields)
 	}
@@ -288,7 +311,11 @@ func (s *SMTPConfig) SendPasswordResetEmail(toEmail, otp string) error {
 		toEmail, subject, htmlBody,
 	)
 
-	return sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
+	err := sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
+	if err != nil {
+		logSMTPError(fmt.Sprintf("SendPasswordResetEmail to %s", toEmail), err)
+	}
+	return err
 }
 
 // SendPasswordChangedEmail sends a confirmation email after password change
@@ -337,5 +364,9 @@ func (s *SMTPConfig) SendPasswordChangedEmail(toEmail string) error {
 		toEmail, subject, htmlBody,
 	)
 
-	return sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
+	err := sendMailWithTimeout(s.Host+":"+s.Port, s.Host, s.User, s.Password, from, []string{toEmail}, []byte(message), 15*time.Second)
+	if err != nil {
+		logSMTPError(fmt.Sprintf("SendPasswordChangedEmail to %s", toEmail), err)
+	}
+	return err
 }

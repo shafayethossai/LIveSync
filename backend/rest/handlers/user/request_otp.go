@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -98,7 +99,8 @@ func (h *Handler) RequestOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send OTP in the background so the API can respond immediately.
+	// Send OTP email ASYNCHRONOUSLY using background context
+	// This prevents the request context cancellation from killing the email goroutine
 	smtpConfig := util.NewSMTPConfig()
 	fmt.Println("=== [RequestOTP] Sending OTP ===")
 	fmt.Printf("[RequestOTP] To: %s\n", req.Email)
@@ -108,13 +110,18 @@ func (h *Handler) RequestOTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("[RequestOTP] SMTP User: %s\n", smtpConfig.User)
 	fmt.Printf("[RequestOTP] SMTP From: %s\n", smtpConfig.From)
 
-	go func(email, code string, cfg *util.SMTPConfig) {
-		if err := cfg.SendOTPEmail(email, code); err != nil {
+	// Send email asynchronously in a goroutine with detached context
+	go func(ctx context.Context, email, code string) {
+		if err := smtpConfig.SendOTPEmail(email, code); err != nil {
 			fmt.Printf("❌ [RequestOTP] Error sending OTP email to %s: %v\n", email, err)
-			return
+			fmt.Printf("❌ [RequestOTP] SMTP Config - Host: %s, Port: %s, User: %s, From: %s\n",
+				smtpConfig.Host, smtpConfig.Port, smtpConfig.User, smtpConfig.From)
+			// Clean up the temp signup since email failed
+			h.userRepo.DeleteTemporarySignup(email)
+		} else {
+			fmt.Printf("✅ [RequestOTP] OTP email sent successfully to %s\n", email)
 		}
-		fmt.Printf("✅ [RequestOTP] OTP email sent successfully to %s\n", email)
-	}(req.Email, otp, smtpConfig)
+	}(context.Background(), req.Email, otp)
 
 	response := OTPResponse{
 		Message: "OTP sent successfully to your email. Please verify within 10 minutes.",

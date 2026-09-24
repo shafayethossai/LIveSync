@@ -52,7 +52,9 @@ type messageRepo struct {
 }
 
 func NewMessageRepo(db *sqlx.DB) MessageRepo {
-	return &messageRepo{db: db}
+	return &messageRepo{
+		db: db,
+	}
 }
 
 func (r *messageRepo) SendMessage(senderID, receiverID int, postID *int, content string) (*MessageDTO, error) {

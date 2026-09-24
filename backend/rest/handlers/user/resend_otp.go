@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -56,20 +57,25 @@ func (h *Handler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send the new OTP in the background so the request does not stall.
+	// Send the new OTP ASYNCHRONOUSLY using background context
+	// This prevents the request context cancellation from killing the email goroutine
 	smtpConfig := util.NewSMTPConfig()
 	fmt.Println("=== Resending OTP ===")
 	fmt.Printf("To: %s\n", req.Email)
 	fmt.Printf("New OTP Code: %s\n", newOTP)
 	fmt.Printf("SMTP Host: %s\n", smtpConfig.Host)
 	fmt.Printf("SMTP Port: %s\n", smtpConfig.Port)
-	go func(email, code string, cfg *util.SMTPConfig) {
-		if err := cfg.SendOTPEmail(email, code); err != nil {
-			fmt.Printf("❌ Error sending OTP email to %s: %v\n", email, err)
-			return
+
+	// Send email asynchronously in a goroutine with detached context
+	go func(ctx context.Context, email, code string) {
+		if err := smtpConfig.SendOTPEmail(email, code); err != nil {
+			fmt.Printf("❌ [ResendOTP] Error sending OTP email to %s: %v\n", email, err)
+			fmt.Printf("❌ [ResendOTP] SMTP Config - Host: %s, Port: %s, User: %s, From: %s\n",
+				smtpConfig.Host, smtpConfig.Port, smtpConfig.User, smtpConfig.From)
+		} else {
+			fmt.Printf("✅ [ResendOTP] OTP email sent successfully to %s\n", email)
 		}
-		fmt.Printf("✅ OTP email sent successfully to %s\n", email)
-	}(req.Email, newOTP, smtpConfig)
+	}(context.Background(), req.Email, newOTP)
 
 	response := OTPResponse{
 		Message: "New OTP sent successfully to your email. Please verify within 10 minutes.",

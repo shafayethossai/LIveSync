@@ -34,10 +34,12 @@ func Serve() {
 
 	// middlewares and repositories
 	middleware := middlewares.NewMiddleware(cnf)
+
 	userRepo := repo.NewUserRepo(dbCon)
 	adminRepo := repo.NewAdminRepo(dbCon)
 	postRepo := repo.NewPostRepo(dbCon)
 	messageRepo := repo.NewMessageRepo(dbCon)
+
 	socketManager := socket.GetManager()
 	socketHandler := socket.NewHandler(cnf, socketManager)
 

@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -63,13 +64,18 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send OTP via email
+	// Send OTP via email ASYNCHRONOUSLY using background context
+	// This prevents the request context cancellation from killing the email goroutine
 	smtpConfig := util.NewSMTPConfig()
-	err = smtpConfig.SendPasswordResetEmail(req.Email, otp)
-	if err != nil {
-		fmt.Println("Error sending password reset email:", err)
-		// Don't fail the request if email fails, just log it
-	}
+	go func(ctx context.Context, email, code string) {
+		if err := smtpConfig.SendPasswordResetEmail(email, code); err != nil {
+			fmt.Printf("❌ [ForgotPassword] Error sending password reset email to %s: %v\n", email, err)
+			fmt.Printf("❌ [ForgotPassword] SMTP Config - Host: %s, Port: %s, User: %s, From: %s\n",
+				smtpConfig.Host, smtpConfig.Port, smtpConfig.User, smtpConfig.From)
+		} else {
+			fmt.Printf("✅ [ForgotPassword] Password reset email sent successfully to %s\n", email)
+		}
+	}(context.Background(), req.Email, otp)
 
 	util.SendData(w, http.StatusOK, map[string]interface{}{
 		"message": "Password reset code sent to your email",

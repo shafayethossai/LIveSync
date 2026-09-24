@@ -9,10 +9,7 @@ import (
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, manager *middlewares.Manager) {
 	// Public routes - No authentication required
 	mux.Handle(
-		"POST /api/users",
-		manager.With(
-			http.HandlerFunc(h.CreateUser),
-		),
+		"POST /api/users", manager.With(http.HandlerFunc(h.CreateUser)),
 	)
 
 	// OTP-based signup flow
@@ -34,6 +31,14 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, manager *middlewares.Manage
 		"POST /api/auth/signup/resend-otp",
 		manager.With(
 			http.HandlerFunc(h.ResendOTP),
+		),
+	)
+
+	// SMTP Test endpoint for debugging
+	mux.Handle(
+		"POST /api/test/smtp",
+		manager.With(
+			http.HandlerFunc(h.TestSMTP),
 		),
 	)
 

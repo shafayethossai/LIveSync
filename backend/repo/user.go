@@ -103,21 +103,8 @@ func (r *userRepo) Create(user User) (*User, error) {
 	}
 
 	query := `
-		INSERT INTO users (
-			name, 
-			email, 
-			password_hash, 
-			phone, 
-			role,
-			avatar_url
-		) VALUES (
-			$1, 
-			$2, 
-			$3, 
-			$4, 
-			$5,
-			$6
-		)
+		INSERT INTO users (name, email, password_hash, phone, role, avatar_url) 
+		VALUES ($1, $2, $3, $4,	$5, $6)
 		RETURNING id, created_at
 	`
 
