@@ -57,7 +57,7 @@ export default function Login() {
   };
 
   return (
-    <>
+    <div>
       {!googleLoginAvailable && (
         <div className="fixed top-4 left-1/2 z-20 w-full max-w-xl -translate-x-1/2 rounded-2xl bg-red-500/90 p-4 text-center text-sm font-semibold text-white shadow-xl">
           Google login is not configured. Set <code className="rounded bg-white/10 px-1 py-0.5">VITE_GOOGLE_CLIENT_ID</code> for production.
@@ -176,6 +176,6 @@ export default function Login() {
           </motion.div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
